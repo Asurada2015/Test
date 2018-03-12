@@ -1,0 +1,6 @@
+https://github.com/hwalsuklee/tensorflow-mnist-cnn
+https://github.com/LuChengTHU/Basic-BatchNormalization
+https://github.com/tmulc18/BatchNormalization
+https://github.com/tlmnhut/BatchNormalization
+
+
