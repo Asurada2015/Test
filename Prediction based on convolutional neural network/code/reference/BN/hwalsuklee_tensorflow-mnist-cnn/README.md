@@ -1,6 +1,7 @@
 # Convolutional Neural-Network for MNIST
 
 https://github.com/hwalsuklee/tensorflow-mnist-cnn
+
 An implementation of convolutional neural-network (CNN) for MNIST with various techniques such as data augmentation, dropout, batchnormalization, etc. 
 
 ## Network architecture

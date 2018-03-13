@@ -6,6 +6,7 @@ from __future__ import print_function
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 
+
 # Create model of CNN with slim api
 def CNN(inputs, is_training=True):
     batch_norm_params = {'is_training': is_training, 'decay': 0.9, 'updates_collections': None}
