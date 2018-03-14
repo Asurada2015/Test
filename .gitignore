@@ -1,4 +1,5 @@
+*.pyc
 /Prediction based on convolutional neural network/code/.idea/
 /Prediction based on convolutional neural network/worklog/*.docx
-/reference/BN/hwalsuklee_tensorflow-mnist-cnn/model/
-/reference/BN/hwalsuklee_tensorflow-mnist-cnn/logs/
+/Prediction based on convolutional neural network/code/reference/BN/hwalsuklee_tensorflow-mnist-cnn/model/
+/Prediction based on convolutional neural network/code/reference/BN/hwalsuklee_tensorflow-mnist-cnn/logs/
