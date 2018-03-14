@@ -1,4 +1,5 @@
 *.pyc
+*/.ipynb_checkpoints/
 /Prediction based on convolutional neural network/code/.idea/
 /Prediction based on convolutional neural network/worklog/*.docx
 /Prediction based on convolutional neural network/code/reference/BN/hwalsuklee_tensorflow-mnist-cnn/model/
