@@ -8,6 +8,7 @@ import tensorflow.contrib.slim as slim
 
 
 # Create model of CNN with slim api
+# 使用tf.slim的api创建神经CNN神经网络
 def CNN(inputs, is_training=True):
     batch_norm_params = {'is_training': is_training, 'decay': 0.9, 'updates_collections': None}
     with slim.arg_scope([slim.conv2d, slim.fully_connected],
