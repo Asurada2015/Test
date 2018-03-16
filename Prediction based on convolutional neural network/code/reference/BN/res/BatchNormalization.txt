@@ -1,7 +1,7 @@
 https://github.com/hwalsuklee/tensorflow-mnist-cnn
 https://github.com/tmulc18/BatchNormalization
 https://github.com/tlmnhut/BatchNormalization
-https://r2rt.com/implementing-batch-normalization-in-tensorflow.html
+https://r2rt.com/implementing-batch-normalization-in-tensorflow.html°æ÷ÿ°ø
 https://github.com/deeplearningzhy/BatchNormalizationTF
 http://ruishu.io/2016/12/27/batchnorm/
 https://github.com/tensorflow/tensorflow/issues/1122#issuecomment-280325584
