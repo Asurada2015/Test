@@ -579,7 +579,7 @@ def train_and_test(use_bad_weights, learning_rate, activation_fn, training_batch
 # ---------------------------------------------------------------------------
 # With Batch Norm: Accuracy on full test set = 0.9786999821662903
 """
-图片保存为:train_and_test_ReLU50000.png
+图片保存为:train_and_test_ReLU001_50000.png
 如预期的那样，两个网络训练良好并最终达到相似的测试精度。但是，请注意，批量归一化模型的收敛速度比其他网络要快一些，
 几乎立即达到90％以上的准确度，并在10或15000次迭代中接近最大准确度。另一个网络需要大约3千次迭代才能达到90％，并且在3万次或更多迭代之前不会达到最佳精度。
 
@@ -588,10 +588,10 @@ def train_and_test(use_bad_weights, learning_rate, activation_fn, training_batch
 """
 
 # 以下示例创建了两个神经网络，它们使用前面示例中使用的相同的参数，但只有2000次迭代的训练
-train_and_test(False, 0.01, tf.nn.relu, 2000, 50)
+# train_and_test(False, 0.01, tf.nn.relu, 2000, 50)
 
 
-# 图片保存为train_and_test_2000.png
+# 图片保存为train_and_test_0012000.png
 # 100%|██████████| 2000/2000 [00:04<00:00, 478.34it/s]
 # Without Batch Norm: After training, final accuracy on validation set = 0.8378000259399414
 # 100%|██████████| 2000/2000 [00:07<00:00, 273.43it/s]
@@ -611,3 +611,82 @@ train_and_test(False, 0.01, tf.nn.relu, 2000, 50)
 因此这个例子相对于上个模型生成2000次的图，时间的花销提高了十倍
 因此为这个例子生成图需要相同2000次迭代的开销的10倍。
 """
+
+# 下面使用Sigmoid激活函数创建两个网络，学习率为0.01，使用合理的起始权重。
+# train_and_test(False, 0.01, tf.nn.sigmoid)
+
+# 图片保存为train_and_test_Sigmoid00150000
+# 100%|██████████| 50000/50000 [01:22<00:00, 608.17it/s]
+# Without Batch Norm: After training, final accuracy on validation set = 0.8184000253677368
+# 100%|██████████| 50000/50000 [02:26<00:00, 342.17it/s]
+# With Batch Norm: After training, final accuracy on validation set = 0.9732000231742859
+# ---------------------------------------------------------------------------
+# Without Batch Norm: Accuracy on full test set = 0.8094000220298767
+# ---------------------------------------------------------------------------
+# With Batch Norm: Accuracy on full test set = 0.9732000231742859
+
+"""
+因为我们使用的图层数量和这个小的学习速率，使用S形激活函数需要很长时间才能开始学习。 
+它最终开始取得进展，但为了获得超过80％的准确度，它花费了超过45,000批次。 
+在大约一千个迭代批次中使用批量标准化可达到90％。
+"""
+
+# 下面使用ReLU激活函数创建两个网络，学习率为1，使用合理的起始权重。
+# train_and_test(False, 1, tf.nn.relu)
+
+# 图片保存为train_and_test_ReLU150000
+# 100%|██████████| 50000/50000 [01:27<00:00, 568.55it/s]
+# Without Batch Norm: After training, final accuracy on validation set = 0.0957999974489212
+# 100%|██████████| 50000/50000 [02:40<00:00, 311.91it/s]
+# With Batch Norm: After training, final accuracy on validation set = 0.9851999878883362
+# ---------------------------------------------------------------------------
+# Without Batch Norm: Accuracy on full test set = 0.09799999743700027
+# ---------------------------------------------------------------------------
+# With Batch Norm: Accuracy on full test set = 0.9846000075340271
+
+"""
+现在我们再次使用ReLUs，但学习速度更快。 该图显示了培训如何开始非常正常，批量规范化的网络开始比另一个更快。
+但是更高的学习速度会使精度提高一点点，并且在某些情况下，没有批量标准化的网络的准确性就会完全崩溃。 
+由于学习率较高，很可能过多的ReLU会在此死亡。
+
+"""
+
+# 下面使用S形激活函数创建两个网络，学习率为1，合理的起始权重。
+# train_and_test(False, 1, tf.nn.sigmoid)
+
+# 图片保存为train_and_test_Sigmoid1_50000
+# 100%|██████████| 50000/50000 [01:31<00:00, 549.33it/s]
+# Without Batch Norm: After training, final accuracy on validation set = 0.9750000238418579
+# 100%|██████████| 50000/50000 [02:32<00:00, 327.02it/s]
+# With Batch Norm: After training, final accuracy on validation set = 0.9805999994277954
+# ---------------------------------------------------------------------------
+# Without Batch Norm: Accuracy on full test set = 0.9768999814987183
+# ---------------------------------------------------------------------------
+# With Batch Norm: Accuracy on full test set = 0.980400025844574
+
+"""
+在这个例子中，我们切换到一个sigmoid激活函数。 它似乎很好地处理了较高的学习率，两个网络都达到了高精度。
+
+下面的单元显示了一个类似的网络对，只有2000次迭代训练。
+"""
+
+# 下面使用Sigmoid激活函数创建两个网络，学习率为1,2000迭代
+# train_and_test(False, 1, tf.nn.sigmoid, 2000, 50)
+
+# 图片保存为train_and_test_Sigmoid1_2000
+# 100%|██████████| 2000/2000 [00:04<00:00, 435.24it/s]
+# Without Batch Norm: After training, final accuracy on validation set = 0.8619999885559082
+# 100%|██████████| 2000/2000 [00:07<00:00, 256.29it/s]
+# With Batch Norm: After training, final accuracy on validation set = 0.9588000178337097
+# ---------------------------------------------------------------------------
+# Without Batch Norm: Accuracy on full test set = 0.857200026512146
+# ---------------------------------------------------------------------------
+# With Batch Norm: Accuracy on full test set = 0.9531999826431274
+
+"""
+正如你所看到的，尽管这些参数在两个网络中都能很好地工作，但批量标准化的参数在400个左右的批次中可以达到90％以上，而另一个则需要1700次迭代才能达到一样的结果。
+当训练更大的网络时，这些差异会变得更加明显。
+"""
+
+# 下面使用Relu激活函数创建两个网络，学习率为2,50000次迭代
+train_and_test(False, 2, tf.nn.relu)
