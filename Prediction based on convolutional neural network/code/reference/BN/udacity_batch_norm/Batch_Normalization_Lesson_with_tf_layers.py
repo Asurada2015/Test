@@ -206,7 +206,7 @@ class NeuralNet:
             # Batch normalization uses weights as usual, but does NOT add a bias term. This is because
             # its calculations include gamma and beta variables that make the bias term unnecessary.
             # (See later in the notebook for more details.)
-            # Batch normalization 和平时一样使用权值，但是不用使用偏置项，这是我们需要额外计算gamma和beta这两个额外项而不用使用偏置属性
+            # Batch normalization 和平时一样使用权值，但是不用使用偏置项，这时我们需要额外计算gamma和beta这两个额外项而不用使用偏置属性
             weights = tf.Variable(initial_weights)
             linear_output = tf.matmul(layer_in, weights)  # 线性输出
 
