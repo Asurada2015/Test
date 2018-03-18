@@ -8,5 +8,11 @@
 2:这个例子比较简单，你可以很快获得训练的结果，这个简短的练习只是为了给你一次向深度神经玩过中添加BN算法的机会
 3:足够简单，无需额外资源即可轻松理解架构。
 """
-# 这个教程中有两种你可以自行编辑的在CNN中实现Batch Normalization的方法,第一个是使用高级函数'tf.layers.batch_normalization',
+# 这个教程中有两种你可以自行编辑的在CNN中实现Batch Normalization的方法,
+# 第一个是使用高级函数'tf.layers.batch_normalization',
 # 第二个使用低级函数'tf.nn.batch_normalization'
+
+# 下载MNIST手写数字识别数据集
+import tensorflow as tf
+from tensorflow.examples.tutorials.mnist import input_data
+mnist = input_data.read_data_sets("MNIST_data/", one_hot=True, reshape=False)
