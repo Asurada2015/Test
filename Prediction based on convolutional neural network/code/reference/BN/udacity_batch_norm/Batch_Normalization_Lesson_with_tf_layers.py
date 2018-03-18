@@ -377,7 +377,7 @@ class NeuralNet:
                 # the population estimates that were calucated while training the model.
                 # 这是使用单个测试用例的正常预测。 但是，请注意我们将`test_training_accuracy`传递给`feed_dict`
                 # 作为`self.is_training`的值。 请记住，它会告诉它是否应该使用批处理平均值和方差，或者是训练模型时计算出的估计值。
-                pred, corr = session.run([tf.arg_max(self.output_layer, 1), accuracy],
+                pred, corr = session.run([tf.argmax(self.output_layer, 1), accuracy],
                                          feed_dict={self.input_layer: [mnist.test.images[i]],
                                                     labels: [mnist.test.labels[i]],
                                                     self.is_training: test_training_accuracy})

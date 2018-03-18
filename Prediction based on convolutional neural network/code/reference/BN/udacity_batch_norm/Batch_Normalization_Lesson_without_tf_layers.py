@@ -172,3 +172,5 @@ def fully_connected(self, layer_in, initial_weights, activation_fn=None):
    其中linear_output表示Xi,normalization_linear_output表示^Xi
    
 """
+
+
