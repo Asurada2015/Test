@@ -37,7 +37,7 @@ def create_pipeline(filename, batch_size, num_threads, num_epochs=None):
     return example_batch, label_batch
 
 
-x_train_batch, y_train_batch = create_pipeline('DT.Train.csv', batch_size=BATCH_SIZE, num_threads=NUM_THREADS,
+x_train_batch, y_train_batch = create_pipeline('a_train.csv', batch_size=BATCH_SIZE, num_threads=NUM_THREADS,
                                                num_epochs=NUM_EPOCHS)
 
 init_op = tf.global_variables_initializer()

@@ -2,8 +2,8 @@
 import tensorflow as tf
 
 MIN_AFTER_DEQUEUE = 1000
-BATCH_SIZE = 100
-NUM_EPOCHS = 1000
+BATCH_SIZE = 1
+NUM_EPOCHS = 1
 NUM_THREADS = 2
 
 
@@ -45,7 +45,7 @@ def create_pipeline(filename, batch_size, num_threads, num_epochs=None):
     return example_batch, label_batch
 
 
-x_train_batch, y_train_batch = create_pipeline('DT.Train.csv', batch_size=BATCH_SIZE, num_threads=NUM_THREADS,
+x_train_batch, y_train_batch = create_pipeline('a_train.csv', batch_size=BATCH_SIZE, num_threads=NUM_THREADS,
                                                num_epochs=NUM_EPOCHS)
 
 init_op = tf.global_variables_initializer()
@@ -59,7 +59,7 @@ with tf.Session() as sess:
         example, label = sess.run([x_train_batch, y_train_batch])
         print(sess.run(tf.shape(example)))
         print(sess.run(tf.shape(label)))
-        print(example[0][1])
+        print(example[0])
         print(label[0])
         # print(label)
     coord.request_stop()
