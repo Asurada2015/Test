@@ -10,7 +10,7 @@ sess = tf.Session()
 # 设置模型超参数
 
 output_every = 100  # 训练输出间隔
-generations = 50000  # 迭代次数 20000
+generations = 3000  # 迭代次数 20000
 eval_every = 100  # 测试输出间隔
 image_height = 21  # 图片高度
 image_width = 21  # 图片宽度
@@ -20,7 +20,7 @@ MIN_AFTER_DEQUEUE = 1000  # 管道最小容量
 BATCH_SIZE = 128  # 批处理数量  128 test use 3
 
 # 数据输入
-NUM_EPOCHS = 3  # 批次轮数
+NUM_EPOCHS = 500  # 批次轮数
 NUM_THREADS = 3  # 线程数
 TRAIN_FILE = 'a_train.csv'
 TEST_FILE = 'a_test.csv'
@@ -82,54 +82,99 @@ def inference(input_images, batch_size, is_training):
     with tf.variable_scope('conv1') as scope:
         # conv1_kernel = truncated_normal_var(name='conv_kernel1', shape=[3, 3, 1, 8], dtype=tf.float32)
         # conv1 = tf.nn.conv2d(input_images, conv1_kernel, [1, 1, 1, 1], padding='SAME')
-        conv1 = tf.layers.conv2d(input_images, 8, kernel_size=(3, 3), strides=(1, 1), padding='valid', use_bias=False,
-                                 kernel_initializer=lambda i, dtype: tf.truncated_normal([3, 3, 1, 8], stddev=0.1),
+        conv1 = tf.layers.conv2d(input_images, 4, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
+                                 kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                  activation=None)
         # conv1_bias = zero_var(name='conv_bias1', shape=[64], dtype=tf.float32)
         # conv1_add_bias = tf.nn.bias_add(conv1, conv1_bias)
         conv1 = tf.layers.batch_normalization(conv1, training=is_training)
-        relu_conv1 = tf.nn.relu(conv1,name='relu_conv1')
+        relu_conv1 = tf.nn.relu(conv1, name='relu_conv1')
     # 池化层
-    pool1 = tf.nn.avg_pool(relu_conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='valid', name='pool_layer1')
-
+    pool1 = tf.nn.avg_pool(relu_conv1, ksize=[1, 2, 2, 1], strides=[1, 1, 1, 1], padding='VALID', name='pool_layer1')
 
     # 第二个卷积层
     with tf.variable_scope('conv2') as scope:
-        conv2_kernel = truncated_normal_var(name='conv_kernel2', shape=[5, 5, 64, 64], dtype=tf.float32)
-        conv2 = tf.nn.conv2d(norm1, conv2_kernel, [1, 1, 1, 1], padding='SAME')
-        conv2_bias = zero_var(name='conv_bias2', shape=[64], dtype=tf.float32)
-        conv2_add_bias = tf.nn.bias_add(conv2, conv2_bias)
-        relu_conv2 = tf.nn.relu(conv2_add_bias)
+        # conv2_kernel = truncated_normal_var(name='conv_kernel2', shape=[5, 5, 64, 64], dtype=tf.float32)
+        # conv2 = tf.nn.conv2d(pool1, conv2_kernel, [1, 1, 1, 1], padding='SAME')
+        conv2 = tf.layers.conv2d(pool1, 8, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
+                                 kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                 activation=None)
+        # conv2_bias = zero_var(name='conv_bias2', shape=[64], dtype=tf.float32)
+        # conv2_add_bias = tf.nn.bias_add(conv2, conv2_bias)
+        conv2 = tf.layers.batch_normalization(conv2, training=is_training)
+        relu_conv2 = tf.nn.relu(conv2, name='relu_conv2')
 
     # 池化层/下采样层
-    pool2 = tf.nn.max_pool(relu_conv2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME', name='pool_layer2')
+    pool2 = tf.nn.avg_pool(relu_conv2, ksize=[1, 2, 2, 1], strides=[1, 1, 1, 1], padding='VALID', name='pool_layer2')
 
-    # 局部响应归一化
-    norm2 = tf.nn.lrn(pool2, depth_radius=5, bias=2.0, alpha=1e-3, beta=0.75, name='norm2')
+    # 第三个卷积层
+    with tf.variable_scope('conv3') as scope:
+        # conv2_kernel = truncated_normal_var(name='conv_kernel2', shape=[5, 5, 64, 64], dtype=tf.float32)
+        # conv2 = tf.nn.conv2d(pool1, conv2_kernel, [1, 1, 1, 1], padding='SAME')
+        conv3 = tf.layers.conv2d(pool2, 16, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
+                                 kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                 activation=None)
+        # conv2_bias = zero_var(name='conv_bias2', shape=[64], dtype=tf.float32)
+        # conv2_add_bias = tf.nn.bias_add(conv2, conv2_bias)
+        conv3 = tf.layers.batch_normalization(conv3, training=is_training)
+        relu_conv3 = tf.nn.relu(conv3, name='relu_conv3')
+
+    # 池化层/下采样层
+    pool3 = tf.nn.avg_pool(relu_conv3, ksize=[1, 2, 2, 1], strides=[1, 1, 1, 1], padding='VALID', name='pool_layer3')
 
     # 光栅化处理，将其打平方便和全连接层进行连接
-    reshaped_output = tf.reshape(norm2, [batch_size, -1])
+    reshaped_output = tf.reshape(pool3, [batch_size, -1])
     reshaped_dim = reshaped_output.get_shape()[1].value
 
     # 全连接层1
     with tf.variable_scope('full1') as scope:
         # 第一个全连接层有384个输出
-        full_weight1 = truncated_normal_var(name='full_mult1', shape=[reshaped_dim, 384], dtype=tf.float32)
-        full_bias1 = zero_var(name='full_bias1', shape=[384], dtype=tf.float32)
-        full_layer1 = tf.nn.relu(tf.add(tf.matmul(reshaped_output, full_weight1), full_bias1))
+        # full_weight1 = truncated_normal_var(name='full_mult1', shape=[reshaped_dim, 512], dtype=tf.float32)
+        # full_bias1 = zero_var(name='full_bias1', shape=[512], dtype=tf.float32)
+        # full_layer1 = tf.nn.relu(tf.add(tf.matmul(reshaped_output, full_weight1), full_bias1))
+        full_layer1 = tf.layers.dense(reshaped_output, 512, activation=None, use_bias=False,
+                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
+        full_layer1 = tf.layers.batch_normalization(full_layer1, training=is_training)
+        full_layer1 = tf.nn.relu(full_layer1)
 
     # 全连接层2
     with tf.variable_scope('full2') as scope:
         # 第二个全连接层有192个输出
-        full_weight2 = truncated_normal_var(name='full_mult2', shape=[384, 192], dtype=tf.float32)
-        full_bias2 = zero_var(name='full_bias2', shape=[192], dtype=tf.float32)
-        full_layer2 = tf.nn.relu(tf.add(tf.matmul(full_layer1, full_weight2), full_bias2))
+        # full_weight2 = truncated_normal_var(name='full_mult2', shape=[512, 192], dtype=tf.float32)
+        # full_bias2 = zero_var(name='full_bias2', shape=[192], dtype=tf.float32)
+        # full_layer2 = tf.nn.relu(tf.add(tf.matmul(full_layer1, full_weight2), full_bias2))
+        full_layer2 = tf.layers.dense(full_layer1, 256, activation=None, use_bias=False,
+                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
+        full_layer2 = tf.layers.batch_normalization(full_layer2, training=is_training)
+        full_layer2 = tf.nn.relu(full_layer2)
+
+    # 全连接层3
+    with tf.variable_scope('full3') as scope:
+        # 第二个全连接层有192个输出
+        # full_weight2 = truncated_normal_var(name='full_mult2', shape=[512, 192], dtype=tf.float32)
+        # full_bias2 = zero_var(name='full_bias2', shape=[192], dtype=tf.float32)
+        # full_layer2 = tf.nn.relu(tf.add(tf.matmul(full_layer1, full_weight2), full_bias2))
+        full_layer3 = tf.layers.dense(full_layer2, 128, activation=None, use_bias=False,
+                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
+        full_layer3 = tf.layers.batch_normalization(full_layer3, training=is_training)
+        full_layer3 = tf.nn.relu(full_layer3)
+
+    # 全连接层4
+    with tf.variable_scope('full4') as scope:
+        # 第二个全连接层有192个输出
+        # full_weight2 = truncated_normal_var(name='full_mult2', shape=[512, 192], dtype=tf.float32)
+        # full_bias2 = zero_var(name='full_bias2', shape=[192], dtype=tf.float32)
+        # full_layer2 = tf.nn.relu(tf.add(tf.matmul(full_layer1, full_weight2), full_bias2))
+        full_layer4 = tf.layers.dense(full_layer3, 64, activation=None, use_bias=False,
+                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
+        full_layer4 = tf.layers.batch_normalization(full_layer4, training=is_training)
+        full_layer4 = tf.nn.relu(full_layer4)
 
     # 最后的全连接层只有3个输出
-    with tf.variable_scope('full3') as scope:
-        full_weight3 = truncated_normal_var(name='full_mult3', shape=[192, num_targets], dtype=tf.float32)
-        full_bias3 = zero_var(name='full_bias3', shape=[num_targets], dtype=tf.float32)
-        final_output = tf.add(tf.matmul(full_layer2, full_weight3), full_bias3)
+    with tf.variable_scope('full5') as scope:
+        full_weight5 = truncated_normal_var(name='full_mult5', shape=[64, num_targets], dtype=tf.float32)
+        full_bias5 = zero_var(name='full_bias5', shape=[num_targets], dtype=tf.float32)
+        final_output = tf.add(tf.matmul(full_layer4, full_weight5), full_bias5)
 
     return (final_output)
 
@@ -146,8 +191,10 @@ def train_step(loss_value, generation_num):
     model_learning_rate = tf.train.exponential_decay(learning_rate, generation_num,
                                                      num_gens_to_wait, lr_decay, staircase=True)
     # 使用Adam优化器进行优化
-    train_step = tf.train.AdamOptimizer(model_learning_rate).minimize(loss_value)
-    return (train_step)
+    # train_step = tf.train.AdamOptimizer(model_learning_rate).minimize(loss_value)
+    with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
+        train_opt = tf.train.AdamOptimizer(learning_rate).minimize(loss_value)
+    return train_opt
 
 
 # 计算R系数
@@ -223,12 +270,13 @@ test_images, test_targets = create_pipeline(TEST_FILE, batch_size=BATCH_SIZE, nu
 
 # 声明模型
 print('Creating the CNN model.')
+is_training = tf.placeholder(tf.bool)
 with tf.variable_scope('model_definition') as scope:
-    model_output = inference(train_images, BATCH_SIZE)
+    model_output = inference(train_images, BATCH_SIZE, is_training)
     # 这非常重要，我们必须设置scope重用变量
     # 否则，当我们设置测试网络模型，它会设置新的随机变量，这会使在测试批次上进行随机评估，影响评估结果
     scope.reuse_variables()
-    test_output = inference(test_images, BATCH_SIZE)
+    test_output = inference(test_images, BATCH_SIZE, is_training)
 # 声明损失函数
 print('Declare Loss Function.')
 loss = cnn_loss(model_output, train_targets)
@@ -268,11 +316,12 @@ test_rpd_yl = []
 test_rpd_el = []
 
 for i in range(generations):
-    _, loss_value = sess.run([train_op, loss])
+    _, loss_value = sess.run([train_op, loss], {is_training: True})
     # 显示在训练集上各项指标
     if (i + 1)%output_every == 0:
-        train_R2_T, train_R2_Y, train_R2_E = sess.run(R2_of_batch(model_output, train_targets))
-        train_RMSE_T, train_RMSE_Y, train_RMSE_E = sess.run(RMSE_of_batch(model_output, train_targets))
+        train_R2_T, train_R2_Y, train_R2_E = sess.run(R2_of_batch(model_output, train_targets), {is_training: True})
+        train_RMSE_T, train_RMSE_Y, train_RMSE_E = sess.run(RMSE_of_batch(model_output, train_targets),
+                                                            {is_training: True})
         # train_RPD_T, train_RPD_Y, train_RPD_E = sess.run(RPD_of_batch(model_output, train_targets))
         # print('train_R2_T', train_R2_T)
         # print('train_RMSE_T', train_RMSE_T)
@@ -292,10 +341,10 @@ for i in range(generations):
         # print(sess.run(Elongation))
     # 显示在测试集上各项指标
     if (i + 1)%eval_every == 0:
-        test_R2_T, test_R2_Y, test_R2_E = sess.run(R2_of_batch(test_output, test_targets))
-        test_RMSE_T, test_RMSE_Y, test_RMSE_E = sess.run(RMSE_of_batch(test_output, test_targets))
-        test_loss_value = sess.run(loss_in_testdata)
-        test_RPD_T, test_RPD_Y, test_RPD_E = sess.run(RPD_of_batch(test_output, test_targets))
+        test_R2_T, test_R2_Y, test_R2_E = sess.run(R2_of_batch(test_output, test_targets), {is_training: False})
+        test_RMSE_T, test_RMSE_Y, test_RMSE_E = sess.run(RMSE_of_batch(test_output, test_targets), {is_training: False})
+        test_loss_value = sess.run(loss_in_testdata, {is_training: False})
+        test_RPD_T, test_RPD_Y, test_RPD_E = sess.run(RPD_of_batch(test_output, test_targets), {is_training: False})
         # print('test_R2_T', test_R2_T)
         # print('test_RMSE_T', test_RMSE_T)
         # print('test_RPD_T', test_RPD_T)
@@ -311,7 +360,7 @@ for i in range(generations):
         test_rpd_yl.append(test_RPD_Y)
         test_rpd_el.append(test_RPD_E)
         print(test_loss_output)
-print('训练集上一个批次数据通过最后一层的前十个输出结果\n', sess.run(model_output)[:10])  # 输出训练集上经过训练后batch上最终的前十个训练数据的输出
+print('训练集上一个批次数据通过最后一层的前十个输出结果\n', sess.run(model_output,{is_training:True})[:10])  # 输出训练集上经过训练后batch上最终的前十个训练数据的输出
 
 # 打印损失函数
 output_indices = range(0, generations, output_every)
@@ -420,14 +469,3 @@ plt.close()
 coord.request_stop()
 coord.join(threads)
 sess.close()
-
-# [[ 0.641783    0.60796201  0.74693024]
-#  [ 0.641783    0.60796201  0.74693024]
-#  [ 0.641783    0.60796201  0.74693024]
-#  [ 0.641783    0.60796201  0.74693024]
-#  [ 0.641783    0.60796201  0.74693024]
-#  [ 0.641783    0.60796201  0.74693024]
-#  [ 0.641783    0.60796201  0.74693024]
-#  [ 0.641783    0.60796201  0.74693024]
-#  [ 0.641783    0.60796201  0.74693024]
-#  [ 0.641783    0.60796201  0.74693024]]
