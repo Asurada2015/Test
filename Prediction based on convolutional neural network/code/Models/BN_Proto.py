@@ -9,26 +9,26 @@ sess = tf.Session()
 
 # 设置模型超参数
 
-output_every = 10  # 训练输出间隔
-generations = 1000  # 迭代次数 20000
-eval_every = 10  # 测试输出间隔
+output_every = 100  # 训练输出间隔
+generations = 50000  # 迭代次数 20000
+eval_every = 100  # 测试输出间隔
 image_height = 21  # 图片高度
 image_width = 21  # 图片宽度
 num_channels = 1  # 图片通道数
 num_targets = 3  # 预测指标数
-MIN_AFTER_DEQUEUE = 2000  # 管道最小容量
-BATCH_SIZE = 10  # 批处理数量  128 test use 3
+MIN_AFTER_DEQUEUE = 1000  # 管道最小容量
+BATCH_SIZE = 128  # 批处理数量  128 test use 3
 
 # 数据输入
-NUM_EPOCHS = 1  # 批次轮数
+NUM_EPOCHS = 3  # 批次轮数
 NUM_THREADS = 3  # 线程数
 TRAIN_FILE = 'a_train.csv'
 TEST_FILE = 'a_test.csv'
 
 # 自适应学习率衰减
-learning_rate = 0.05  # 初始学习率
-lr_decay = 0.1  # 学习率衰减速度
-num_gens_to_wait = 250  # 学习率更新周期
+learning_rate = 0.1  # 初始学习率
+lr_decay = 0.9  # 学习率衰减速度
+num_gens_to_wait = 100  # 学习率更新周期
 
 
 # 读取数据
@@ -68,7 +68,7 @@ def create_pipeline(filename, batch_size, num_threads, num_epochs=None):
 
 # 定义模型架构
 
-def cnn_model(input_images, batch_size):
+def inference(input_images, batch_size, is_training):
     # 截断高斯函数初始化
     def truncated_normal_var(name, shape, dtype):
         return (tf.get_variable(name=name, shape=shape, dtype=dtype,
@@ -80,17 +80,18 @@ def cnn_model(input_images, batch_size):
 
     # 第一卷积层
     with tf.variable_scope('conv1') as scope:
-        conv1_kernel = truncated_normal_var(name='conv_kernel1', shape=[5, 5, 1, 64], dtype=tf.float32)
-        conv1 = tf.nn.conv2d(input_images, conv1_kernel, [1, 1, 1, 1], padding='SAME')
-        conv1_bias = zero_var(name='conv_bias1', shape=[64], dtype=tf.float32)
-        conv1_add_bias = tf.nn.bias_add(conv1, conv1_bias)
-        relu_conv1 = tf.nn.relu(conv1_add_bias)
-
+        # conv1_kernel = truncated_normal_var(name='conv_kernel1', shape=[3, 3, 1, 8], dtype=tf.float32)
+        # conv1 = tf.nn.conv2d(input_images, conv1_kernel, [1, 1, 1, 1], padding='SAME')
+        conv1 = tf.layers.conv2d(input_images, 8, kernel_size=(3, 3), strides=(1, 1), padding='valid', use_bias=False,
+                                 kernel_initializer=lambda i, dtype: tf.truncated_normal([3, 3, 1, 8], stddev=0.1),
+                                 activation=None)
+        # conv1_bias = zero_var(name='conv_bias1', shape=[64], dtype=tf.float32)
+        # conv1_add_bias = tf.nn.bias_add(conv1, conv1_bias)
+        conv1 = tf.layers.batch_normalization(conv1, training=is_training)
+        relu_conv1 = tf.nn.relu(conv1,name='relu_conv1')
     # 池化层
-    pool1 = tf.nn.max_pool(relu_conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME', name='pool_layer1')
+    pool1 = tf.nn.avg_pool(relu_conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='valid', name='pool_layer1')
 
-    # 局部响应归一化
-    norm1 = tf.nn.lrn(pool1, depth_radius=5, bias=2.0, alpha=1e-3, beta=0.75, name='norm1')
 
     # 第二个卷积层
     with tf.variable_scope('conv2') as scope:
@@ -223,11 +224,11 @@ test_images, test_targets = create_pipeline(TEST_FILE, batch_size=BATCH_SIZE, nu
 # 声明模型
 print('Creating the CNN model.')
 with tf.variable_scope('model_definition') as scope:
-    model_output = cnn_model(train_images, BATCH_SIZE)
+    model_output = inference(train_images, BATCH_SIZE)
     # 这非常重要，我们必须设置scope重用变量
     # 否则，当我们设置测试网络模型，它会设置新的随机变量，这会使在测试批次上进行随机评估，影响评估结果
     scope.reuse_variables()
-    test_output = cnn_model(test_images, BATCH_SIZE)
+    test_output = inference(test_images, BATCH_SIZE)
 # 声明损失函数
 print('Declare Loss Function.')
 loss = cnn_loss(model_output, train_targets)

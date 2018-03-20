@@ -20,7 +20,6 @@ def train(mnist):
     regularizer = tf.contrib.layers.l2_regularizer(REGULARIZATION_RATE)
     y = mnist_inference.inference(x, regularizer)
     global_step = tf.Variable(0, trainable=False)
-
     # 处理滑动平均的命名空间。
     with tf.name_scope("moving_average"):
         variable_averages = tf.train.ExponentialMovingAverage(MOVING_AVERAGE_DECAY, global_step)

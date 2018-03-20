@@ -12,7 +12,7 @@ TRAIN_STEPS = 3000
 def variable_summaries(var, name):
     # 将生成监控信息的操作放在同一个命名空间下
     with tf.name_scope('summaries'):
-        # 通过tf.histogram_summary函数记录张量中元素的取值分布
+        # 通过tf.summary.histogram函数记录张量中元素的取值分布
         tf.summary.histogram(name, var)
 
         # 计算变量的平均值，并定义生成平均值信息日志的操作，记录变量平均值信息的日志标签名
@@ -56,7 +56,7 @@ def main():
     with tf.name_scope('input_reshape'):
         image_shaped_input = tf.reshape(x, [-1, 28, 28, 1])
         tf.summary.image('input', image_shaped_input, 10)
-        # 将输入变量还原成图片的像素矩阵，并通过tf.iamge_summary函数定义将当前的图片信息写入日志的操作
+        # 将输入变量还原成图片的像素矩阵，并通过tf.summary.image函数定义将当前的图片信息写入日志的操作
 
     hidden1 = nn_layer(x, 784, 500, 'layer1')
     y = nn_layer(hidden1, 500, 10, 'layer2', act=tf.identity)
