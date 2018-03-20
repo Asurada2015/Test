@@ -360,8 +360,8 @@ for i in range(generations):
         test_rpd_yl.append(test_RPD_Y)
         test_rpd_el.append(test_RPD_E)
         print(test_loss_output)
-print('训练集上一个批次数据通过最后一层的前十个输出结果\n', sess.run(model_output,{is_training:True})[:10])  # 输出训练集上经过训练后batch上最终的前十个训练数据的输出
-
+print('训练集上一个批次数据通过inference的前十个输出结果\n', sess.run(model_output,{is_training:True})[:10])
+print('测试集上一个批次数据中通过inference后的前10个输出结果\n',sess.run(test_output,{is_training:False})[:10])
 # 打印损失函数
 output_indices = range(0, generations, output_every)
 eval_indices = range(0, generations, eval_every)
