@@ -5,4 +5,3 @@ http://blog.csdn.net/u013719780/article/details/53907105
 http://blog.csdn.net/u014281392/article/details/74316028
 https://www.ctolib.com/topics-106833.html
 https://github.com/lawlite19/MachineLearning_TensorFlow
-http://www.aboutyun.com/thread-23477-1-1.html
