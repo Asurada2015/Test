@@ -221,7 +221,7 @@ class NeuralNet:
             # When not using batch normalization, create a standard layer that multiplies
             # the inputs and weights, adds a bias, and optionally passes the result
             # through an activation function.
-            # 当不使用Batch Normalization时，创建一个使用权值和输入相乘后加上偏置的标准层然后徐选择性的添加激活函数
+            # 当不使用Batch Normalization时，创建一个使用权值和输入相乘后加上偏置的标准层然后选择性的添加激活函数
             weights = tf.Variable(initial_weights)
             biases = tf.Variable(tf.zeros([initial_weights.shape[-1]]))  # 表示该层神经元的输出个数
             linear_output = tf.add(tf.matmul(layer_in, weights), biases)

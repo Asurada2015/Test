@@ -3,19 +3,20 @@ import os
 import numpy as np
 
 '''将DT.train.csv中的数据分成a_train和a_test两个csv文件，其中a_train.csv中有24500个数据，a_test.csv中有10500个数据'''
+"""将DT.TrainValue.csv数据分成train_value和test_value两个文件，其中train_value有27000个数据，test_value有11691个数据"""
 labels = []
 data = []
 a_train_file = 'a_train.csv'
 a_test_file = 'a_test.csv'
-a_file = 'DT.Train.csv'
+a_file = 'DT.TrainValue.csv'
 
 seed = 3
 np.random.seed(seed)
-train_indices = np.random.choice(35444, 24500, replace=False)
-residue = np.array(list(set(range(35444)) - set(train_indices)))
-# print(np.array(train_indices).shape)  # (24500,)
+train_indices = np.random.choice(38691, 27000, replace=False)
+residue = np.array(list(set(range(38691)) - set(train_indices)))
+# print(np.array(train_indices).shape)  # (27000,)
 # print(residue.shape)  # (10944,)
-test_indices = np.random.choice(len(residue), 10500, replace=False)
+test_indices = np.random.choice(len(residue), 11691, replace=False)
 # print(np.array(test_indices).shape)  # (10500,)
 
 with open(a_file)as afile:
