@@ -10,7 +10,7 @@ sess = tf.Session()
 # 设置模型超参数
 
 output_every = 10  # 训练输出间隔
-generations = 1000  # 迭代次数 20000
+generations = 300  # 迭代次数 20000
 eval_every = 10  # 测试输出间隔
 image_height = 21  # 图片高度
 image_width = 21  # 图片宽度

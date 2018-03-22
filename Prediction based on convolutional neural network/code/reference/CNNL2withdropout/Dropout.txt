@@ -1,0 +1,2 @@
+https://stackoverflow.com/questions/44395547/tensorflow-whats-the-difference-between-tf-nn-dropout-and-tf-layers-dropout
+¡¾tf.nn.dropoutÓëtf.layers.dropoutÇø±ğ¡¿

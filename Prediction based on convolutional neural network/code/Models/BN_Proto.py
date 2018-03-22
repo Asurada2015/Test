@@ -39,8 +39,8 @@ def read_data(file_queue):
     defaults = [[0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.],
                 [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.],
                 [0.], [0.], [0.], [0.]]
-    C, MN, SI, P, S, CU, AL, ALS, NI, CR, TI, MO, V, NB, N, H, B, Furnace, RoughMill, FinishMill, DownCoil, Tensile, Yeild, Elongation \
-        = tf.decode_csv(value, defaults)
+    C, MN, SI, P, S, CU, AL, ALS, NI, CR, TI, MO, V, NB, N, H, B, Furnace, RoughMill, FinishMill, \
+    DownCoil, Tensile, Yeild, Elongation = tf.decode_csv(value, defaults)
     vertor_example = tf.stack(
         [C, MN, SI, P, S, CU, AL, ALS, NI, CR, TI, MO, V, NB, N, H, B, Furnace, RoughMill, FinishMill,
          DownCoil])
@@ -194,7 +194,7 @@ def train_step(loss_value, generation_num):
     # 使用Adam优化器进行优化
     # train_step = tf.train.AdamOptimizer(model_learning_rate).minimize(loss_value)
     with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
-        train_opt = tf.train.AdamOptimizer(learning_rate).minimize(loss_value)
+        train_opt = tf.train.AdamOptimizer(model_learning_rate).minimize(loss_value)
     return train_opt
 
 

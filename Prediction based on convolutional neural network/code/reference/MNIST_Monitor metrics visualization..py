@@ -1,11 +1,12 @@
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
+import tqdm as tqdm
 
 # ####  1. 生成变量监控信息并定义生成监控信息日志的操作。
 
 SUMMARY_DIR = "log"
 BATCH_SIZE = 100
-TRAIN_STEPS = 3000
+TRAIN_STEPS = 500
 
 
 # var给出了需要记录的张量,name给出了在可视化结果中显示的图表名称，这个名称一般和变量名一致
@@ -47,7 +48,7 @@ def nn_layer(input_tensor, input_dim, output_dim, layer_name, act=tf.nn.relu):
 
 
 def main():
-    mnist = input_data.read_data_sets("../../datasets/MNIST_data", one_hot=True)
+    mnist = input_data.read_data_sets("./MNIST_data", one_hot=True)
 
     with tf.name_scope('input'):
         x = tf.placeholder(tf.float32, [None, 784], name='x-input')
@@ -84,13 +85,14 @@ def main():
         summary_writer = tf.summary.FileWriter(SUMMARY_DIR, sess.graph)
         tf.global_variables_initializer().run()
 
-        for i in range(TRAIN_STEPS):
+        for i in tqdm.tqdm(range(TRAIN_STEPS)):
             xs, ys = mnist.train.next_batch(BATCH_SIZE)
             # 运行训练步骤以及所有的日志生成操作，得到这次运行的日志。
             summary, _ = sess.run([merged, train_step], feed_dict={x: xs, y_: ys})
             # 将得到的所有日志写入日志文件，这样TensorBoard程序就可以拿到这次运行所对应的
             # 运行信息。
             summary_writer.add_summary(summary, i)
+
 
     summary_writer.close()
 

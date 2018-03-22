@@ -21,6 +21,7 @@ MIN_AFTER_DEQUEUE = 1000  # 管道最小容量
 BATCH_SIZE = 256  # 批处理数量  128 test use 3
 REGULARAZTION_RATE = 0.00001  # 正则化项在损失函数中的系数,如果使用0值则表示不使用正则项
 
+
 # 数据输入
 NUM_EPOCHS = 500  # 批次轮数
 NUM_THREADS = 3  # 线程数
@@ -101,7 +102,6 @@ def inference(input_images, batch_size, is_training):
         # conv2 = tf.nn.conv2d(pool1, conv2_kernel, [1, 1, 1, 1], padding='SAME')
         conv2 = tf.layers.conv2d(pool1, 8, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
         # conv2_bias = zero_var(name='conv_bias2', shape=[64], dtype=tf.float32)
         # conv2_add_bias = tf.nn.bias_add(conv2, conv2_bias)
@@ -117,7 +117,6 @@ def inference(input_images, batch_size, is_training):
         # conv2 = tf.nn.conv2d(pool1, conv2_kernel, [1, 1, 1, 1], padding='SAME')
         conv3 = tf.layers.conv2d(pool2, 16, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
         # conv2_bias = zero_var(name='conv_bias2', shape=[64], dtype=tf.float32)
         # conv2_add_bias = tf.nn.bias_add(conv2, conv2_bias)
@@ -138,10 +137,10 @@ def inference(input_images, batch_size, is_training):
         # full_bias1 = zero_var(name='full_bias1', shape=[512], dtype=tf.float32)
         # full_layer1 = tf.nn.relu(tf.add(tf.matmul(reshaped_output, full_weight1), full_bias1))
         full_layer1 = tf.layers.dense(reshaped_output, 512, activation=None, use_bias=False,
-                                      kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE))
+                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
         full_layer1 = tf.layers.batch_normalization(full_layer1, training=is_training)
         full_layer1 = tf.nn.relu(full_layer1)
+
 
     # 全连接层2
     with tf.variable_scope('full2') as scope:
@@ -150,8 +149,7 @@ def inference(input_images, batch_size, is_training):
         # full_bias2 = zero_var(name='full_bias2', shape=[192], dtype=tf.float32)
         # full_layer2 = tf.nn.relu(tf.add(tf.matmul(full_layer1, full_weight2), full_bias2))
         full_layer2 = tf.layers.dense(full_layer1, 256, activation=None, use_bias=False,
-                                      kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE))
+                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
         full_layer2 = tf.layers.batch_normalization(full_layer2, training=is_training)
         full_layer2 = tf.nn.relu(full_layer2)
 
@@ -162,8 +160,7 @@ def inference(input_images, batch_size, is_training):
         # full_bias2 = zero_var(name='full_bias2', shape=[192], dtype=tf.float32)
         # full_layer2 = tf.nn.relu(tf.add(tf.matmul(full_layer1, full_weight2), full_bias2))
         full_layer3 = tf.layers.dense(full_layer2, 128, activation=None, use_bias=False,
-                                      kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE))
+                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
         full_layer3 = tf.layers.batch_normalization(full_layer3, training=is_training)
         full_layer3 = tf.nn.relu(full_layer3)
 
@@ -174,8 +171,7 @@ def inference(input_images, batch_size, is_training):
         # full_bias2 = zero_var(name='full_bias2', shape=[192], dtype=tf.float32)
         # full_layer2 = tf.nn.relu(tf.add(tf.matmul(full_layer1, full_weight2), full_bias2))
         full_layer4 = tf.layers.dense(full_layer3, 64, activation=None, use_bias=False,
-                                      kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE))
+                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
         full_layer4 = tf.layers.batch_normalization(full_layer4, training=is_training)
         full_layer4 = tf.nn.relu(full_layer4)
 
@@ -204,7 +200,7 @@ def train_step(loss_value, generation_num):
     # 使用Adam优化器进行优化
     # train_step = tf.train.AdamOptimizer(model_learning_rate).minimize(loss_value)
     with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
-        train_opt = tf.train.AdamOptimizer(learning_rate).minimize(loss_value)
+        train_opt = tf.train.AdamOptimizer(model_learning_rate).minimize(loss_value)
     return train_opt
 
 

@@ -1,5 +1,0 @@
-http://blog.csdn.net/marsjhao/article/details/72900646【使用tf.nn.conv2d函数】
-https://www.jianshu.com/p/d6ac55e7b076
-https://my.oschina.net/u/2391658/blog/1234290
-https://www.cnblogs.com/denny402/p/6933172.html【重要】
-http://blog.csdn.net/u012436149/article/details/70264257【重要】
