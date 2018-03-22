@@ -19,6 +19,7 @@ num_channels = 1  # 图片通道数
 num_targets = 3  # 预测指标数
 MIN_AFTER_DEQUEUE = 1000  # 管道最小容量
 BATCH_SIZE = 256  # 批处理数量  128 test use 3
+REGULARAZTION_RATE = 0.00001  # 正则化项在损失函数中的系数,如果使用0值则表示不使用正则项
 
 # 数据输入
 NUM_EPOCHS = 500  # 批次轮数
@@ -85,6 +86,7 @@ def inference(input_images, batch_size, is_training):
         # conv1 = tf.nn.conv2d(input_images, conv1_kernel, [1, 1, 1, 1], padding='SAME')
         conv1 = tf.layers.conv2d(input_images, 4, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
         # conv1_bias = zero_var(name='conv_bias1', shape=[64], dtype=tf.float32)
         # conv1_add_bias = tf.nn.bias_add(conv1, conv1_bias)
@@ -99,6 +101,7 @@ def inference(input_images, batch_size, is_training):
         # conv2 = tf.nn.conv2d(pool1, conv2_kernel, [1, 1, 1, 1], padding='SAME')
         conv2 = tf.layers.conv2d(pool1, 8, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
         # conv2_bias = zero_var(name='conv_bias2', shape=[64], dtype=tf.float32)
         # conv2_add_bias = tf.nn.bias_add(conv2, conv2_bias)
@@ -114,6 +117,7 @@ def inference(input_images, batch_size, is_training):
         # conv2 = tf.nn.conv2d(pool1, conv2_kernel, [1, 1, 1, 1], padding='SAME')
         conv3 = tf.layers.conv2d(pool2, 16, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
         # conv2_bias = zero_var(name='conv_bias2', shape=[64], dtype=tf.float32)
         # conv2_add_bias = tf.nn.bias_add(conv2, conv2_bias)
@@ -134,7 +138,8 @@ def inference(input_images, batch_size, is_training):
         # full_bias1 = zero_var(name='full_bias1', shape=[512], dtype=tf.float32)
         # full_layer1 = tf.nn.relu(tf.add(tf.matmul(reshaped_output, full_weight1), full_bias1))
         full_layer1 = tf.layers.dense(reshaped_output, 512, activation=None, use_bias=False,
-                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
+                                      kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE))
         full_layer1 = tf.layers.batch_normalization(full_layer1, training=is_training)
         full_layer1 = tf.nn.relu(full_layer1)
 
@@ -145,7 +150,8 @@ def inference(input_images, batch_size, is_training):
         # full_bias2 = zero_var(name='full_bias2', shape=[192], dtype=tf.float32)
         # full_layer2 = tf.nn.relu(tf.add(tf.matmul(full_layer1, full_weight2), full_bias2))
         full_layer2 = tf.layers.dense(full_layer1, 256, activation=None, use_bias=False,
-                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
+                                      kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE))
         full_layer2 = tf.layers.batch_normalization(full_layer2, training=is_training)
         full_layer2 = tf.nn.relu(full_layer2)
 
@@ -156,7 +162,8 @@ def inference(input_images, batch_size, is_training):
         # full_bias2 = zero_var(name='full_bias2', shape=[192], dtype=tf.float32)
         # full_layer2 = tf.nn.relu(tf.add(tf.matmul(full_layer1, full_weight2), full_bias2))
         full_layer3 = tf.layers.dense(full_layer2, 128, activation=None, use_bias=False,
-                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
+                                      kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE))
         full_layer3 = tf.layers.batch_normalization(full_layer3, training=is_training)
         full_layer3 = tf.nn.relu(full_layer3)
 
@@ -167,7 +174,8 @@ def inference(input_images, batch_size, is_training):
         # full_bias2 = zero_var(name='full_bias2', shape=[192], dtype=tf.float32)
         # full_layer2 = tf.nn.relu(tf.add(tf.matmul(full_layer1, full_weight2), full_bias2))
         full_layer4 = tf.layers.dense(full_layer3, 64, activation=None, use_bias=False,
-                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
+                                      kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE))
         full_layer4 = tf.layers.batch_normalization(full_layer4, training=is_training)
         full_layer4 = tf.nn.relu(full_layer4)
 
@@ -183,7 +191,9 @@ def inference(input_images, batch_size, is_training):
 # 损失函数MSE
 def cnn_loss(logits, targets):
     mse = tf.reduce_mean(tf.square(logits - targets), name='mse')  # 均方误差
-    return (mse)
+    regularization_loss = tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))  # weight上正则化损失
+    mse = mse + regularization_loss
+    return mse
 
 
 # 训练阶段函数
@@ -377,7 +387,7 @@ plt.plot(eval_indices, test_lossl, label='loss in test dataset', linewidth=1.0, 
 plt.title(' Loss per Generation of train/test dataset')
 plt.xlabel('Generation')
 plt.ylabel('Loss')
-plt.legend(loc=1,fancybox=True, shadow=True)
+plt.legend(loc=1, fancybox=True, shadow=True)
 plt.show()
 #
 # 显示训练集/测试集R2函数变化
@@ -388,7 +398,7 @@ plt.plot(eval_indices, test_r2_tl, label='test dataset', linewidth=1.0, color='b
 plt.title(' R of Tensile')
 plt.xlabel('Generation')
 plt.ylabel('R')
-plt.legend(loc=4,fancybox=True, shadow=True)
+plt.legend(loc=4, fancybox=True, shadow=True)
 
 plt.subplot(1, 3, 2)
 plt.plot(output_indices, train_r2_yl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
@@ -396,7 +406,7 @@ plt.plot(eval_indices, test_r2_yl, label='test dataset', linewidth=1.0, color='b
 plt.title(' R of Yeild')
 plt.xlabel('Generation')
 plt.ylabel('R')
-plt.legend(loc=4,fancybox=True, shadow=True)
+plt.legend(loc=4, fancybox=True, shadow=True)
 
 plt.subplot(1, 3, 3)
 plt.plot(output_indices, train_r2_el, label='train dataset', linewidth=1.0, color='red',
@@ -405,7 +415,7 @@ plt.plot(eval_indices, test_r2_el, label='test dataset', linewidth=1.0, color='b
 plt.title(' R of Elongation')
 plt.xlabel('Generation')
 plt.ylabel('R')
-plt.legend(loc=4,fancybox=True, shadow=True)
+plt.legend(loc=4, fancybox=True, shadow=True)
 plt.show()
 
 # 显示训练集/测试集RMSE函数变化
@@ -416,7 +426,7 @@ plt.plot(eval_indices, test_rmse_tl, label='test dataset', linewidth=1.0, color=
 plt.title(' RMSE of Tensile')
 plt.xlabel('Generation')
 plt.ylabel('RMSE')
-plt.legend(loc=1,fancybox=True, shadow=True)
+plt.legend(loc=1, fancybox=True, shadow=True)
 
 plt.subplot(1, 3, 2)
 plt.plot(output_indices, train_rmse_yl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
@@ -424,7 +434,7 @@ plt.plot(eval_indices, test_rmse_yl, label='test dataset', linewidth=1.0, color=
 plt.title(' RMSE of Yeild')
 plt.xlabel('Generation')
 plt.ylabel('RMSE')
-plt.legend(loc=1,fancybox=True, shadow=True)
+plt.legend(loc=1, fancybox=True, shadow=True)
 
 plt.subplot(1, 3, 3)
 plt.plot(output_indices, train_rmse_el, label='train dataset', linewidth=1.0, color='red',
@@ -433,7 +443,7 @@ plt.plot(eval_indices, test_rmse_el, label='test dataset', linewidth=1.0, color=
 plt.title(' RMSE of Elongation')
 plt.xlabel('Generation')
 plt.ylabel('RMSE')
-plt.legend(loc=1,fancybox=True, shadow=True)
+plt.legend(loc=1, fancybox=True, shadow=True)
 plt.show()
 
 # 显示测试集RPD函数变化

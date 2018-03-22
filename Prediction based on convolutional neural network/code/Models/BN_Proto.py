@@ -377,7 +377,7 @@ plt.plot(eval_indices, test_lossl, label='loss in test dataset', linewidth=1.0, 
 plt.title(' Loss per Generation of train/test dataset')
 plt.xlabel('Generation')
 plt.ylabel('Loss')
-plt.legend(loc=1,fancybox=True, shadow=True)
+plt.legend(loc=1, fancybox=True, shadow=True)
 plt.show()
 #
 # 显示训练集/测试集R2函数变化
@@ -388,7 +388,7 @@ plt.plot(eval_indices, test_r2_tl, label='test dataset', linewidth=1.0, color='b
 plt.title(' R of Tensile')
 plt.xlabel('Generation')
 plt.ylabel('R')
-plt.legend(loc=4,fancybox=True, shadow=True)
+plt.legend(loc=4, fancybox=True, shadow=True)
 
 plt.subplot(1, 3, 2)
 plt.plot(output_indices, train_r2_yl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
@@ -396,7 +396,7 @@ plt.plot(eval_indices, test_r2_yl, label='test dataset', linewidth=1.0, color='b
 plt.title(' R of Yeild')
 plt.xlabel('Generation')
 plt.ylabel('R')
-plt.legend(loc=4,fancybox=True, shadow=True)
+plt.legend(loc=4, fancybox=True, shadow=True)
 
 plt.subplot(1, 3, 3)
 plt.plot(output_indices, train_r2_el, label='train dataset', linewidth=1.0, color='red',
@@ -405,7 +405,7 @@ plt.plot(eval_indices, test_r2_el, label='test dataset', linewidth=1.0, color='b
 plt.title(' R of Elongation')
 plt.xlabel('Generation')
 plt.ylabel('R')
-plt.legend(loc=4,fancybox=True, shadow=True)
+plt.legend(loc=4, fancybox=True, shadow=True)
 plt.show()
 
 # 显示训练集/测试集RMSE函数变化
@@ -416,7 +416,7 @@ plt.plot(eval_indices, test_rmse_tl, label='test dataset', linewidth=1.0, color=
 plt.title(' RMSE of Tensile')
 plt.xlabel('Generation')
 plt.ylabel('RMSE')
-plt.legend(loc=1,fancybox=True, shadow=True)
+plt.legend(loc=1, fancybox=True, shadow=True)
 
 plt.subplot(1, 3, 2)
 plt.plot(output_indices, train_rmse_yl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
@@ -424,7 +424,7 @@ plt.plot(eval_indices, test_rmse_yl, label='test dataset', linewidth=1.0, color=
 plt.title(' RMSE of Yeild')
 plt.xlabel('Generation')
 plt.ylabel('RMSE')
-plt.legend(loc=1,fancybox=True, shadow=True)
+plt.legend(loc=1, fancybox=True, shadow=True)
 
 plt.subplot(1, 3, 3)
 plt.plot(output_indices, train_rmse_el, label='train dataset', linewidth=1.0, color='red',
@@ -433,7 +433,7 @@ plt.plot(eval_indices, test_rmse_el, label='test dataset', linewidth=1.0, color=
 plt.title(' RMSE of Elongation')
 plt.xlabel('Generation')
 plt.ylabel('RMSE')
-plt.legend(loc=1,fancybox=True, shadow=True)
+plt.legend(loc=1, fancybox=True, shadow=True)
 plt.show()
 
 # 显示测试集RPD函数变化
