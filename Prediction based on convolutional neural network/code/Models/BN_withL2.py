@@ -3,6 +3,8 @@ import numpy as np
 import tqdm
 import tensorflow as tf
 from tensorflow.python.framework import ops
+import csv
+import os
 
 ops.reset_default_graph()
 
@@ -11,7 +13,7 @@ sess = tf.Session()
 # 设置模型超参数
 
 output_every = 10  # 训练输出间隔/控制图像标尺
-generations = 300  # 迭代次数 20000
+generations = 400  # 迭代次数 20000
 eval_every = 10  # 测试输出间隔/控制图像标尺
 image_height = 21  # 图片高度
 image_width = 21  # 图片宽度
@@ -20,10 +22,15 @@ num_targets = 3  # 预测指标数
 MIN_AFTER_DEQUEUE = 1000  # 管道最小容量
 BATCH_SIZE = 256  # 批处理数量  128 test use 3
 REGULARAZTION_RATE = 0.00001  # 正则化项在损失函数中的系数,如果使用0值则表示不使用正则项
-
-
+SAVEValue = 50  # 保存模型各项参数值
+save_test_file = 'test.csv'
+save_train_file = 'train.csv'
+ViewGraph = 100
+Savemodel = 100
+MODEL_SAVE_PATH = './model_log'
+MODEL_NAME = 'model.ckpt'
 # 数据输入
-NUM_EPOCHS = 500  # 批次轮数
+NUM_EPOCHS = 5000  # 批次轮数
 NUM_THREADS = 3  # 线程数
 TRAIN_FILE = 'a_train.csv'
 TEST_FILE = 'a_test.csv'
@@ -141,7 +148,6 @@ def inference(input_images, batch_size, is_training):
         full_layer1 = tf.layers.batch_normalization(full_layer1, training=is_training)
         full_layer1 = tf.nn.relu(full_layer1)
 
-
     # 全连接层2
     with tf.variable_scope('full2') as scope:
         # 第二个全连接层有192个输出
@@ -197,8 +203,6 @@ def train_step(loss_value, generation_num):
     # 自适应学习率递减
     model_learning_rate = tf.train.exponential_decay(learning_rate, generation_num,
                                                      num_gens_to_wait, lr_decay, staircase=True)
-    # 使用Adam优化器进行优化
-    # train_step = tf.train.AdamOptimizer(model_learning_rate).minimize(loss_value)
     with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
         train_opt = tf.train.AdamOptimizer(model_learning_rate).minimize(loss_value)
     return train_opt
@@ -321,7 +325,15 @@ test_rmse_el = []
 test_rpd_tl = []
 test_rpd_yl = []
 test_rpd_el = []
+log_train = []
+for a in range(7):
+    log_train.append([])
 
+log_test = []
+
+for b in range(10):
+    log_test.append([])
+saver = tf.train.Saver()
 for i in tqdm.tqdm(range(generations)):
     _, loss_value = sess.run([train_op, loss], {is_training: True})
     # 显示在训练集上各项指标
@@ -331,9 +343,6 @@ for i in tqdm.tqdm(range(generations)):
             train_R2_T, train_R2_Y, train_R2_E = sess.run(R2_of_batch(model_output, train_targets), {is_training: True})
             train_RMSE_T, train_RMSE_Y, train_RMSE_E = sess.run(RMSE_of_batch(model_output, train_targets),
                                                                 {is_training: True})
-            # train_RPD_T, train_RPD_Y, train_RPD_E = sess.run(RPD_of_batch(model_output, train_targets))
-            # print('train_R2_T', train_R2_T)
-            # print('train_RMSE_T', train_RMSE_T)
             train_lossl.append(loss_value)
             output = 'Generation {}: train Loss = {:.5f}'.format((i + 1), loss_value)
             train_r2_tl.append(train_R2_T)
@@ -342,12 +351,15 @@ for i in tqdm.tqdm(range(generations)):
             train_rmse_tl.append(train_RMSE_T)
             train_rmse_yl.append(train_RMSE_Y)
             train_rmse_el.append(train_RMSE_E)
-            # print('train_RPD_T', train_RPD_T)
-            # print(sess.run(model_output))
+            log_train[0].append(loss_value)
+            log_train[1].append(train_R2_T)
+            log_train[2].append(train_R2_Y)
+            log_train[3].append(train_R2_E)
+            log_train[4].append(train_RMSE_T)
+            log_train[5].append(train_RMSE_Y)
+            log_train[6].append(train_RMSE_E)
             print(output)  # 显示训练集上的loss值
-            # print(sess.run(Tensile)) # 只有在此处才能查看tensor变量完整数值
-            # print(sess.run(Yeild))
-            # print(sess.run(Elongation))
+
         # 显示在测试集上各项指标
 
         if (i + 1)%eval_every == 0:
@@ -356,9 +368,6 @@ for i in tqdm.tqdm(range(generations)):
                                                              {is_training: False})
             test_loss_value = sess.run(loss_in_testdata, {is_training: False})
             test_RPD_T, test_RPD_Y, test_RPD_E = sess.run(RPD_of_batch(test_output, test_targets), {is_training: False})
-            # print('test_R2_T', test_R2_T)
-            # print('test_RMSE_T', test_RMSE_T)
-            # print('test_RPD_T', test_RPD_T)
             test_lossl.append(test_loss_value)
             test_loss_output = 'Generation {}: test Loss = {:.5f}'.format((i + 1), test_loss_value)
             test_r2_tl.append(test_R2_T)
@@ -370,104 +379,132 @@ for i in tqdm.tqdm(range(generations)):
             test_rpd_tl.append(test_RPD_T)
             test_rpd_yl.append(test_RPD_Y)
             test_rpd_el.append(test_RPD_E)
+            log_test[0].append(test_loss_value)
+            log_test[1].append(test_R2_T)
+            log_test[2].append(test_R2_Y)
+            log_test[3].append(test_R2_E)
+            log_test[4].append(test_RMSE_T)
+            log_test[5].append(test_RMSE_Y)
+            log_test[6].append(test_RMSE_E)
+            log_test[7].append(test_RPD_T)
+            log_test[8].append(test_RPD_Y)
+            log_test[9].append(test_RPD_E)
             print(test_loss_output)
-print('训练集上一个批次数据通过inference的前十个输出结果\n', sess.run(model_output, {is_training: True})[:10])
-print('测试集上一个批次数据中通过inference后的前10个输出结果\n', sess.run(test_output, {is_training: False})[:10])
-# 打印损失函数
-output_indices = range(100, generations, output_every)
-eval_indices = range(100, generations, eval_every)
+            # 保存所有属性值
+        if (i + 1)%SAVEValue == 0:
+            save_Totest_file = str(i + 1) + save_test_file
+            with open(save_Totest_file, "w", newline='') as f:
+                writer = csv.writer(f)
+                for a in range(10):
+                    writer.writerows([log_test[a]])
+            f.close()
+            save_Totrain_file = str(i + 1) + save_train_file
+            with open(save_Totrain_file, "w", newline='') as f:
+                writer = csv.writer(f)
+                for a in range(7):
+                    writer.writerows([log_train[a]])
+            f.close()
 
-# 显示训练集/测试集loss函数
-plt.plot(output_indices, train_lossl, label='loss in train dataset', linewidth=1.0, color='red', linestyle='--')
-plt.plot(eval_indices, test_lossl, label='loss in test dataset', linewidth=1.0, color='blue')
-plt.title(' Loss per Generation of train/test dataset')
-plt.xlabel('Generation')
-plt.ylabel('Loss')
-plt.legend(loc=1, fancybox=True, shadow=True)
-plt.show()
-#
-# 显示训练集/测试集R2函数变化
-plt.figure()
-plt.subplot(1, 3, 1)
-plt.plot(output_indices, train_r2_tl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
-plt.plot(eval_indices, test_r2_tl, label='test dataset', linewidth=1.0, color='blue')
-plt.title(' R of Tensile')
-plt.xlabel('Generation')
-plt.ylabel('R')
-plt.legend(loc=4, fancybox=True, shadow=True)
+        if (i + 1)%ViewGraph == 0:
+            # 打印损失函数
+            output_indices = range(100, i + 1, output_every)
+            eval_indices = range(100, i + 1, eval_every)
 
-plt.subplot(1, 3, 2)
-plt.plot(output_indices, train_r2_yl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
-plt.plot(eval_indices, test_r2_yl, label='test dataset', linewidth=1.0, color='blue')
-plt.title(' R of Yeild')
-plt.xlabel('Generation')
-plt.ylabel('R')
-plt.legend(loc=4, fancybox=True, shadow=True)
+            # 显示训练集/测试集loss函数
+            plt.plot(output_indices, train_lossl, label='loss in train dataset', linewidth=1.0, color='red',
+                     linestyle='--')
+            plt.plot(eval_indices, test_lossl, label='loss in test dataset', linewidth=1.0, color='blue')
+            plt.title(' Loss per Generation of train/test dataset')
+            plt.xlabel('Generation')
+            plt.ylabel('Loss')
+            plt.legend(loc=1, fancybox=True, shadow=True)
+            plt.show()
+            #
+            # 显示训练集/测试集R2函数变化
+            plt.figure()
+            plt.subplot(1, 3, 1)
+            plt.plot(output_indices, train_r2_tl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
+            plt.plot(eval_indices, test_r2_tl, label='test dataset', linewidth=1.0, color='blue')
+            plt.title(' R of Tensile')
+            plt.xlabel('Generation')
+            plt.ylabel('R')
+            plt.legend(loc=4, fancybox=True, shadow=True)
 
-plt.subplot(1, 3, 3)
-plt.plot(output_indices, train_r2_el, label='train dataset', linewidth=1.0, color='red',
-         linestyle='--')
-plt.plot(eval_indices, test_r2_el, label='test dataset', linewidth=1.0, color='blue')
-plt.title(' R of Elongation')
-plt.xlabel('Generation')
-plt.ylabel('R')
-plt.legend(loc=4, fancybox=True, shadow=True)
-plt.show()
+            plt.subplot(1, 3, 2)
+            plt.plot(output_indices, train_r2_yl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
+            plt.plot(eval_indices, test_r2_yl, label='test dataset', linewidth=1.0, color='blue')
+            plt.title(' R of Yeild')
+            plt.xlabel('Generation')
+            plt.ylabel('R')
+            plt.legend(loc=4, fancybox=True, shadow=True)
 
-# 显示训练集/测试集RMSE函数变化
-plt.figure()
-plt.subplot(1, 3, 1)
-plt.plot(output_indices, train_rmse_tl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
-plt.plot(eval_indices, test_rmse_tl, label='test dataset', linewidth=1.0, color='blue')
-plt.title(' RMSE of Tensile')
-plt.xlabel('Generation')
-plt.ylabel('RMSE')
-plt.legend(loc=1, fancybox=True, shadow=True)
+            plt.subplot(1, 3, 3)
+            plt.plot(output_indices, train_r2_el, label='train dataset', linewidth=1.0, color='red',
+                     linestyle='--')
+            plt.plot(eval_indices, test_r2_el, label='test dataset', linewidth=1.0, color='blue')
+            plt.title(' R of Elongation')
+            plt.xlabel('Generation')
+            plt.ylabel('R')
+            plt.legend(loc=4, fancybox=True, shadow=True)
+            plt.show()
 
-plt.subplot(1, 3, 2)
-plt.plot(output_indices, train_rmse_yl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
-plt.plot(eval_indices, test_rmse_yl, label='test dataset', linewidth=1.0, color='blue')
-plt.title(' RMSE of Yeild')
-plt.xlabel('Generation')
-plt.ylabel('RMSE')
-plt.legend(loc=1, fancybox=True, shadow=True)
+            # 显示训练集/测试集RMSE函数变化
+            plt.figure()
+            plt.subplot(1, 3, 1)
+            plt.plot(output_indices, train_rmse_tl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
+            plt.plot(eval_indices, test_rmse_tl, label='test dataset', linewidth=1.0, color='blue')
+            plt.title(' RMSE of Tensile')
+            plt.xlabel('Generation')
+            plt.ylabel('RMSE')
+            plt.legend(loc=1, fancybox=True, shadow=True)
 
-plt.subplot(1, 3, 3)
-plt.plot(output_indices, train_rmse_el, label='train dataset', linewidth=1.0, color='red',
-         linestyle='--')
-plt.plot(eval_indices, test_rmse_el, label='test dataset', linewidth=1.0, color='blue')
-plt.title(' RMSE of Elongation')
-plt.xlabel('Generation')
-plt.ylabel('RMSE')
-plt.legend(loc=1, fancybox=True, shadow=True)
-plt.show()
+            plt.subplot(1, 3, 2)
+            plt.plot(output_indices, train_rmse_yl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
+            plt.plot(eval_indices, test_rmse_yl, label='test dataset', linewidth=1.0, color='blue')
+            plt.title(' RMSE of Yeild')
+            plt.xlabel('Generation')
+            plt.ylabel('RMSE')
+            plt.legend(loc=1, fancybox=True, shadow=True)
 
-# 显示测试集RPD函数变化
-plt.figure()
-plt.subplot(1, 3, 1)
-plt.plot(eval_indices, test_rpd_tl, label='test dataset', linewidth=1.0, color='blue')
-plt.title(' RPD of Tensile')
-plt.xlabel('Generation')
-plt.ylabel('RPD')
-plt.legend(loc=2, fancybox=True, shadow=True)
+            plt.subplot(1, 3, 3)
+            plt.plot(output_indices, train_rmse_el, label='train dataset', linewidth=1.0, color='red',
+                     linestyle='--')
+            plt.plot(eval_indices, test_rmse_el, label='test dataset', linewidth=1.0, color='blue')
+            plt.title(' RMSE of Elongation')
+            plt.xlabel('Generation')
+            plt.ylabel('RMSE')
+            plt.legend(loc=1, fancybox=True, shadow=True)
+            plt.show()
 
-plt.subplot(1, 3, 2)
-plt.plot(eval_indices, test_rpd_yl, label='test dataset', linewidth=1.0, color='blue')
-plt.title(' RPD of Yeild')
-plt.xlabel('Generation')
-plt.ylabel('RPD')
-plt.legend(loc=2, fancybox=True, shadow=True)
+            # 显示测试集RPD函数变化
+            plt.figure()
+            plt.subplot(1, 3, 1)
+            plt.plot(eval_indices, test_rpd_tl, label='test dataset', linewidth=1.0, color='blue')
+            plt.title(' RPD of Tensile')
+            plt.xlabel('Generation')
+            plt.ylabel('RPD')
+            plt.legend(loc=2, fancybox=True, shadow=True)
 
-plt.subplot(1, 3, 3)
-plt.plot(eval_indices, test_rpd_el, label='test dataset', linewidth=1.0, color='blue')
-plt.title(' RPD of Elongation')
-plt.xlabel('Generation')
-plt.ylabel('RPD')
-plt.legend(loc=2, fancybox=True, shadow=True)  # loc=2 表示'upperleft'
-plt.show()
+            plt.subplot(1, 3, 2)
+            plt.plot(eval_indices, test_rpd_yl, label='test dataset', linewidth=1.0, color='blue')
+            plt.title(' RPD of Yeild')
+            plt.xlabel('Generation')
+            plt.ylabel('RPD')
+            plt.legend(loc=2, fancybox=True, shadow=True)
 
-plt.close()
+            plt.subplot(1, 3, 3)
+            plt.plot(eval_indices, test_rpd_el, label='test dataset', linewidth=1.0, color='blue')
+            plt.title(' RPD of Elongation')
+            plt.xlabel('Generation')
+            plt.ylabel('RPD')
+            plt.legend(loc=2, fancybox=True, shadow=True)  # loc=2 表示'upperleft'
+            plt.show()
 
+            plt.close()
+            print('训练集上一个批次数据通过inference的前十个输出结果\n', sess.run(model_output, {is_training: True})[:10])
+            print('测试集上一个批次数据中通过inference后的前10个输出结果\n', sess.run(test_output, {is_training: False})[:10])
+        if i%Savemodel == 0:
+            saver.save(sess, os.path.join(MODEL_SAVE_PATH, MODEL_NAME), global_step=i)
 # 关闭线程和Session
 coord.request_stop()
 coord.join(threads)
