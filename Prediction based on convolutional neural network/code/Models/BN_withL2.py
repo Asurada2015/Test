@@ -12,9 +12,9 @@ sess = tf.Session()
 
 # 设置模型超参数
 
-output_every = 10  # 训练输出间隔/控制图像标尺
-generations = 400  # 迭代次数 20000
-eval_every = 10  # 测试输出间隔/控制图像标尺
+output_every = 100  # 训练输出间隔/控制图像标尺
+generations = 80000  # 迭代次数 20000
+eval_every = 100  # 测试输出间隔/控制图像标尺
 image_height = 21  # 图片高度
 image_width = 21  # 图片宽度
 num_channels = 1  # 图片通道数
@@ -22,15 +22,15 @@ num_targets = 3  # 预测指标数
 MIN_AFTER_DEQUEUE = 1000  # 管道最小容量
 BATCH_SIZE = 256  # 批处理数量  128 test use 3
 REGULARAZTION_RATE = 0.00001  # 正则化项在损失函数中的系数,如果使用0值则表示不使用正则项
-SAVEValue = 50  # 保存模型各项参数值
+SAVEValue = 5000  # 保存模型各项参数值
 save_test_file = 'test.csv'
 save_train_file = 'train.csv'
-ViewGraph = 100
-Savemodel = 100
+ViewGraph = 5000
+Savemodel = 5000
 MODEL_SAVE_PATH = './model_log'
 MODEL_NAME = 'model.ckpt'
 # 数据输入
-NUM_EPOCHS = 5000  # 批次轮数
+NUM_EPOCHS = 2000  # 批次轮数
 NUM_THREADS = 3  # 线程数
 TRAIN_FILE = 'a_train.csv'
 TEST_FILE = 'a_test.csv'
@@ -109,6 +109,7 @@ def inference(input_images, batch_size, is_training):
         # conv2 = tf.nn.conv2d(pool1, conv2_kernel, [1, 1, 1, 1], padding='SAME')
         conv2 = tf.layers.conv2d(pool1, 8, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
         # conv2_bias = zero_var(name='conv_bias2', shape=[64], dtype=tf.float32)
         # conv2_add_bias = tf.nn.bias_add(conv2, conv2_bias)
@@ -124,6 +125,7 @@ def inference(input_images, batch_size, is_training):
         # conv2 = tf.nn.conv2d(pool1, conv2_kernel, [1, 1, 1, 1], padding='SAME')
         conv3 = tf.layers.conv2d(pool2, 16, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
         # conv2_bias = zero_var(name='conv_bias2', shape=[64], dtype=tf.float32)
         # conv2_add_bias = tf.nn.bias_add(conv2, conv2_bias)
@@ -139,12 +141,9 @@ def inference(input_images, batch_size, is_training):
 
     # 全连接层1
     with tf.variable_scope('full1') as scope:
-        # 第一个全连接层有384个输出
-        # full_weight1 = truncated_normal_var(name='full_mult1', shape=[reshaped_dim, 512], dtype=tf.float32)
-        # full_bias1 = zero_var(name='full_bias1', shape=[512], dtype=tf.float32)
-        # full_layer1 = tf.nn.relu(tf.add(tf.matmul(reshaped_output, full_weight1), full_bias1))
         full_layer1 = tf.layers.dense(reshaped_output, 512, activation=None, use_bias=False,
-                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
+                                      kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE))
         full_layer1 = tf.layers.batch_normalization(full_layer1, training=is_training)
         full_layer1 = tf.nn.relu(full_layer1)
 
