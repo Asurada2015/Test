@@ -38,7 +38,7 @@ TEST_FILE = 'a_test.csv'
 # 自适应学习率衰减
 learning_rate = 0.1  # 初始学习率
 lr_decay = 0.9  # 学习率衰减速度
-num_gens_to_wait = 100  # 学习率更新周期
+num_gens_to_wait = 300  # 学习率更新周期
 
 
 # 读取数据
@@ -92,7 +92,7 @@ def inference(input_images, batch_size, is_training):
     with tf.variable_scope('conv1') as scope:
         # conv1_kernel = truncated_normal_var(name='conv_kernel1', shape=[3, 3, 1, 8], dtype=tf.float32)
         # conv1 = tf.nn.conv2d(input_images, conv1_kernel, [1, 1, 1, 1], padding='SAME')
-        conv1 = tf.layers.conv2d(input_images, 4, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
+        conv1 = tf.layers.conv2d(input_images, 8, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                  kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
@@ -107,7 +107,7 @@ def inference(input_images, batch_size, is_training):
     with tf.variable_scope('conv2') as scope:
         # conv2_kernel = truncated_normal_var(name='conv_kernel2', shape=[5, 5, 64, 64], dtype=tf.float32)
         # conv2 = tf.nn.conv2d(pool1, conv2_kernel, [1, 1, 1, 1], padding='SAME')
-        conv2 = tf.layers.conv2d(pool1, 8, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
+        conv2 = tf.layers.conv2d(pool1, 16, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                  kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
@@ -123,7 +123,7 @@ def inference(input_images, batch_size, is_training):
     with tf.variable_scope('conv3') as scope:
         # conv2_kernel = truncated_normal_var(name='conv_kernel2', shape=[5, 5, 64, 64], dtype=tf.float32)
         # conv2 = tf.nn.conv2d(pool1, conv2_kernel, [1, 1, 1, 1], padding='SAME')
-        conv3 = tf.layers.conv2d(pool2, 16, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
+        conv3 = tf.layers.conv2d(pool2, 32, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                  kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
@@ -332,6 +332,7 @@ log_test = []
 
 for b in range(10):
     log_test.append([])
+
 saver = tf.train.Saver()
 for i in tqdm.tqdm(range(generations)):
     _, loss_value = sess.run([train_op, loss], {is_training: True})
@@ -417,6 +418,7 @@ for i in tqdm.tqdm(range(generations)):
             plt.xlabel('Generation')
             plt.ylabel('Loss')
             plt.legend(loc=1, fancybox=True, shadow=True)
+            plt.savefig('loss_'+str(i+1)+'.png')
             plt.show()
             #
             # 显示训练集/测试集R2函数变化
@@ -445,6 +447,7 @@ for i in tqdm.tqdm(range(generations)):
             plt.xlabel('Generation')
             plt.ylabel('R')
             plt.legend(loc=4, fancybox=True, shadow=True)
+            plt.savefig('R_' + str(i + 1) + '.png')
             plt.show()
 
             # 显示训练集/测试集RMSE函数变化
@@ -473,6 +476,7 @@ for i in tqdm.tqdm(range(generations)):
             plt.xlabel('Generation')
             plt.ylabel('RMSE')
             plt.legend(loc=1, fancybox=True, shadow=True)
+            plt.savefig('RMSE_' + str(i + 1) + '.png')
             plt.show()
 
             # 显示测试集RPD函数变化
@@ -497,6 +501,7 @@ for i in tqdm.tqdm(range(generations)):
             plt.xlabel('Generation')
             plt.ylabel('RPD')
             plt.legend(loc=2, fancybox=True, shadow=True)  # loc=2 表示'upperleft'
+            plt.savefig('RPD_' + str(i + 1) + '.png')
             plt.show()
 
             plt.close()
