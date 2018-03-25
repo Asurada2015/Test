@@ -30,7 +30,7 @@ Savemodel = 5000
 MODEL_SAVE_PATH = './model_log'
 MODEL_NAME = 'model.ckpt'
 # 数据输入
-NUM_EPOCHS = 2000  # 批次轮数
+NUM_EPOCHS = 5000  # 批次轮数
 NUM_THREADS = 3  # 线程数
 TRAIN_FILE = 'a_train.csv'
 TEST_FILE = 'a_test.csv'
