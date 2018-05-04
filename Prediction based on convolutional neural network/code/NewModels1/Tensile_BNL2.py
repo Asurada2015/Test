@@ -13,21 +13,21 @@ sess = tf.Session()
 # 设置模型超参数
 
 output_every = 100  # 训练输出间隔/控制图像标尺
-generations = 80000  # 迭代次数 20000
+generations = 5000  # 迭代次数 20000
 eval_every = 100  # 测试输出间隔/控制图像标尺
-image_height = 21  # 图片高度
-image_width = 21  # 图片宽度
+image_height = 20  # 图片高度
+image_width = 20  # 图片宽度
 num_channels = 1  # 图片通道数
-num_targets = 3  # 预测指标数
+num_targets = 1  # 预测指标数
 MIN_AFTER_DEQUEUE = 1000  # 管道最小容量
 BATCH_SIZE = 256  # 批处理数量  128 test use 3
 REGULARAZTION_RATE = 0.00001  # 正则化项在损失函数中的系数,如果使用0值则表示不使用正则项
 SAVEValue = 5000  # 保存模型各项参数值
 save_test_file = 'test.csv'
 save_train_file = 'train.csv'
-ViewGraph = 5000
+ViewGraph = 1000
 Savemodel = 5000
-MODEL_SAVE_PATH = './model_log'
+MODEL_SAVE_PATH = './Tensile_log'
 MODEL_NAME = 'model.ckpt'
 # 数据输入
 NUM_EPOCHS = 5000  # 批次轮数
@@ -38,7 +38,7 @@ TEST_FILE = 'a_test.csv'
 # 自适应学习率衰减
 learning_rate = 0.1  # 初始学习率
 lr_decay = 0.9  # 学习率衰减速度
-num_gens_to_wait = 300  # 学习率更新周期
+num_gens_to_wait = 200  # 学习率更新周期
 
 
 # 读取数据
@@ -47,18 +47,18 @@ def read_data(file_queue):
     key, value = reader.read(file_queue)
     defaults = [[0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.],
                 [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.],
-                [0.], [0.], [0.], [0.]]
-    C, MN, SI, P, S, CU, AL, ALS, NI, CR, TI, MO, V, NB, N, H, B, Furnace, RoughMill, FinishMill, DownCoil, Tensile, Yeild, Elongation \
+                [0.]]
+    C, MN, SI, P, S, CU, AL, ALS, NI, CR, TI, MO, V, NB, N, B, Furnace, RoughMill, FinishMill, DownCoil, Tensile \
         = tf.decode_csv(value, defaults)
     vertor_example = tf.stack(
-        [C, MN, SI, P, S, CU, AL, ALS, NI, CR, TI, MO, V, NB, N, H, B, Furnace, RoughMill, FinishMill,
+        [C, MN, SI, P, S, CU, AL, ALS, NI, CR, TI, MO, V, NB, N, B, Furnace, RoughMill, FinishMill,
          DownCoil])
-    # 将(21)维度的数据添加维度成为(1,21)的向量
+    # 将(20)维度的数据添加维度成为(1,20)的向量
 
     example_2D = tf.expand_dims(vertor_example, 0)
     trans_example_2D = tf.transpose(example_2D)
     example = tf.expand_dims(tf.matmul(trans_example_2D, example_2D), 2)
-    vertor_label = tf.stack([Tensile, Yeild, Elongation])
+    vertor_label = tf.stack([Tensile])
     return example, vertor_label
 
 
@@ -90,14 +90,10 @@ def inference(input_images, batch_size, is_training):
 
     # 第一卷积层
     with tf.variable_scope('conv1') as scope:
-        # conv1_kernel = truncated_normal_var(name='conv_kernel1', shape=[3, 3, 1, 8], dtype=tf.float32)
-        # conv1 = tf.nn.conv2d(input_images, conv1_kernel, [1, 1, 1, 1], padding='SAME')
         conv1 = tf.layers.conv2d(input_images, 8, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                  kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
-        # conv1_bias = zero_var(name='conv_bias1', shape=[64], dtype=tf.float32)
-        # conv1_add_bias = tf.nn.bias_add(conv1, conv1_bias)
         conv1 = tf.layers.batch_normalization(conv1, training=is_training)
         relu_conv1 = tf.nn.relu(conv1, name='relu_conv1')
     # 池化层
@@ -105,14 +101,10 @@ def inference(input_images, batch_size, is_training):
 
     # 第二个卷积层
     with tf.variable_scope('conv2') as scope:
-        # conv2_kernel = truncated_normal_var(name='conv_kernel2', shape=[5, 5, 64, 64], dtype=tf.float32)
-        # conv2 = tf.nn.conv2d(pool1, conv2_kernel, [1, 1, 1, 1], padding='SAME')
         conv2 = tf.layers.conv2d(pool1, 16, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                  kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
-        # conv2_bias = zero_var(name='conv_bias2', shape=[64], dtype=tf.float32)
-        # conv2_add_bias = tf.nn.bias_add(conv2, conv2_bias)
         conv2 = tf.layers.batch_normalization(conv2, training=is_training)
         relu_conv2 = tf.nn.relu(conv2, name='relu_conv2')
 
@@ -121,14 +113,10 @@ def inference(input_images, batch_size, is_training):
 
     # 第三个卷积层
     with tf.variable_scope('conv3') as scope:
-        # conv2_kernel = truncated_normal_var(name='conv_kernel2', shape=[5, 5, 64, 64], dtype=tf.float32)
-        # conv2 = tf.nn.conv2d(pool1, conv2_kernel, [1, 1, 1, 1], padding='SAME')
         conv3 = tf.layers.conv2d(pool2, 32, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                  kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
-        # conv2_bias = zero_var(name='conv_bias2', shape=[64], dtype=tf.float32)
-        # conv2_add_bias = tf.nn.bias_add(conv2, conv2_bias)
         conv3 = tf.layers.batch_normalization(conv3, training=is_training)
         relu_conv3 = tf.nn.relu(conv3, name='relu_conv3')
 
@@ -418,7 +406,7 @@ for i in tqdm.tqdm(range(generations)):
             plt.xlabel('Generation')
             plt.ylabel('Loss')
             plt.legend(loc=1, fancybox=True, shadow=True)
-            plt.savefig('loss_'+str(i+1)+'.png')
+            plt.savefig('loss_' + str(i + 1) + '.png')
             plt.show()
             #
             # 显示训练集/测试集R2函数变化
