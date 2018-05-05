@@ -23,8 +23,8 @@ MIN_AFTER_DEQUEUE = 1000  # 管道最小容量
 BATCH_SIZE = 256  # 批处理数量  128 test use 3
 REGULARAZTION_RATE = 0.00001  # 正则化项在损失函数中的系数,如果使用0值则表示不使用正则项
 SAVEValue = 5000  # 保存模型各项参数值
-save_test_file = 'test.csv'
-save_train_file = 'train.csv'
+save_test_file = 'testParameter.csv'
+save_train_file = 'trainParameter.csv'
 ViewGraph = 1000
 Savemodel = 5000
 MODEL_SAVE_PATH = './Tensile_log'
@@ -47,8 +47,8 @@ def read_data(file_queue):
     key, value = reader.read(file_queue)
     defaults = [[0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.],
                 [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.],
-                [0.]]
-    C, MN, SI, P, S, CU, AL, ALS, NI, CR, TI, MO, V, NB, N, B, Furnace, RoughMill, FinishMill, DownCoil, Tensile \
+                [0.], [0.], [0.]]
+    C, MN, SI, P, S, CU, AL, ALS, NI, CR, TI, MO, V, NB, N, B, Furnace, RoughMill, FinishMill, DownCoil, Tensile, Yeild, Elongation \
         = tf.decode_csv(value, defaults)
     vertor_example = tf.stack(
         [C, MN, SI, P, S, CU, AL, ALS, NI, CR, TI, MO, V, NB, N, B, Furnace, RoughMill, FinishMill,
@@ -138,9 +138,6 @@ def inference(input_images, batch_size, is_training):
     # 全连接层2
     with tf.variable_scope('full2') as scope:
         # 第二个全连接层有192个输出
-        # full_weight2 = truncated_normal_var(name='full_mult2', shape=[512, 192], dtype=tf.float32)
-        # full_bias2 = zero_var(name='full_bias2', shape=[192], dtype=tf.float32)
-        # full_layer2 = tf.nn.relu(tf.add(tf.matmul(full_layer1, full_weight2), full_bias2))
         full_layer2 = tf.layers.dense(full_layer1, 256, activation=None, use_bias=False,
                                       kernel_initializer=tf.contrib.layers.xavier_initializer())
         full_layer2 = tf.layers.batch_normalization(full_layer2, training=is_training)
@@ -149,9 +146,6 @@ def inference(input_images, batch_size, is_training):
     # 全连接层3
     with tf.variable_scope('full3') as scope:
         # 第二个全连接层有192个输出
-        # full_weight2 = truncated_normal_var(name='full_mult2', shape=[512, 192], dtype=tf.float32)
-        # full_bias2 = zero_var(name='full_bias2', shape=[192], dtype=tf.float32)
-        # full_layer2 = tf.nn.relu(tf.add(tf.matmul(full_layer1, full_weight2), full_bias2))
         full_layer3 = tf.layers.dense(full_layer2, 128, activation=None, use_bias=False,
                                       kernel_initializer=tf.contrib.layers.xavier_initializer())
         full_layer3 = tf.layers.batch_normalization(full_layer3, training=is_training)
@@ -160,15 +154,12 @@ def inference(input_images, batch_size, is_training):
     # 全连接层4
     with tf.variable_scope('full4') as scope:
         # 第二个全连接层有192个输出
-        # full_weight2 = truncated_normal_var(name='full_mult2', shape=[512, 192], dtype=tf.float32)
-        # full_bias2 = zero_var(name='full_bias2', shape=[192], dtype=tf.float32)
-        # full_layer2 = tf.nn.relu(tf.add(tf.matmul(full_layer1, full_weight2), full_bias2))
         full_layer4 = tf.layers.dense(full_layer3, 64, activation=None, use_bias=False,
                                       kernel_initializer=tf.contrib.layers.xavier_initializer())
         full_layer4 = tf.layers.batch_normalization(full_layer4, training=is_training)
         full_layer4 = tf.nn.relu(full_layer4)
 
-    # 最后的全连接层只有3个输出
+    # 最后的全连接层只有1个输出
     with tf.variable_scope('full5') as scope:
         full_weight5 = truncated_normal_var(name='full_mult5', shape=[64, num_targets], dtype=tf.float32)
         full_bias5 = zero_var(name='full_bias5', shape=[num_targets], dtype=tf.float32)
@@ -209,13 +200,11 @@ def R2(logits, targets):
 # 三种指标的R系数
 def R2_of_batch(logits, targets):
     trans_logits = tf.transpose(logits)
-    logits_Tensile, logits_Yeild, logits_Elongation = tf.unstack(tf.cast(trans_logits, tf.double))
+    logits_Tensile = tf.unstack(tf.cast(trans_logits, tf.double))
     trans_targets = tf.transpose(targets)
-    targets_Tensile, targets_Yeild, targets_Elongation = tf.unstack(tf.cast(trans_targets, tf.double))
+    targets_Tensile = tf.unstack(tf.cast(trans_targets, tf.double))
     r2_Tensile = R2(logits_Tensile, targets_Tensile)
-    r2_Yeild = R2(logits_Yeild, targets_Yeild)
-    r2_Elongation = R2(logits_Elongation, targets_Elongation)
-    return r2_Tensile, r2_Yeild, r2_Elongation
+    return r2_Tensile
 
 
 # 计算RMSE均方根误差
@@ -227,13 +216,11 @@ def RMSE(logits, targets):
 # 三种指标的RMSE系数
 def RMSE_of_batch(logits, targets):
     trans_logits = tf.transpose(logits)
-    logits_Tensile, logits_Yeild, logits_Elongation = tf.unstack(tf.cast(trans_logits, tf.double))
+    logits_Tensile = tf.unstack(tf.cast(trans_logits, tf.double))
     trans_targets = tf.transpose(targets)
-    targets_Tensile, targets_Yeild, targets_Elongation = tf.unstack(tf.cast(trans_targets, tf.double))
+    targets_Tensile = tf.unstack(tf.cast(trans_targets, tf.double))
     rmse_Tensile = RMSE(logits_Tensile, targets_Tensile)
-    rmse_Yeild = RMSE(logits_Yeild, targets_Yeild)
-    rmse_Elongation = RMSE(logits_Elongation, targets_Elongation)
-    return rmse_Tensile, rmse_Yeild, rmse_Elongation
+    return rmse_Tensile
 
 
 # 计算RPD值
@@ -249,13 +236,11 @@ def RPD(logits, targets):
 # 测试集上三种指标相对分析误差值RPD
 def RPD_of_batch(logits, targets):
     trans_logits = tf.transpose(logits)
-    logits_Tensile, logits_Yeild, logits_Elongation = tf.unstack(tf.cast(trans_logits, tf.double))
+    logits_Tensile = tf.unstack(tf.cast(trans_logits, tf.double))
     trans_targets = tf.transpose(targets)
-    targets_Tensile, targets_Yeild, targets_Elongation = tf.unstack(tf.cast(trans_targets, tf.double))
+    targets_Tensile = tf.unstack(tf.cast(trans_targets, tf.double))
     rpd_Tensile = RPD(logits_Tensile, targets_Tensile)
-    rpd_Yeild = RPD(logits_Yeild, targets_Yeild)
-    rpd_Elongation = RPD(logits_Elongation, targets_Elongation)
-    return rpd_Tensile, rpd_Yeild, rpd_Elongation
+    return rpd_Tensile
 
 
 # 获取数据
@@ -297,28 +282,17 @@ threads = tf.train.start_queue_runners(coord=coord, sess=sess)
 print('Starting Training')
 train_lossl = []
 train_r2_tl = []
-train_r2_yl = []
-train_r2_el = []
 train_rmse_tl = []
-train_rmse_yl = []
-train_rmse_el = []
 test_lossl = []
 test_r2_tl = []
-test_r2_yl = []
-test_r2_el = []
 test_rmse_tl = []
-test_rmse_yl = []
-test_rmse_el = []
 test_rpd_tl = []
-test_rpd_yl = []
-test_rpd_el = []
+
 log_train = []
-for a in range(7):
+for a in range(3):
     log_train.append([])
-
 log_test = []
-
-for b in range(10):
+for b in range(4):
     log_test.append([])
 
 saver = tf.train.Saver()
@@ -328,68 +302,48 @@ for i in tqdm.tqdm(range(generations)):
     # 因为在前100次迭代过程中会有明显的下降过程不能分清细节
     if i >= 100:
         if (i + 1)%output_every == 0:
-            train_R2_T, train_R2_Y, train_R2_E = sess.run(R2_of_batch(model_output, train_targets), {is_training: True})
-            train_RMSE_T, train_RMSE_Y, train_RMSE_E = sess.run(RMSE_of_batch(model_output, train_targets),
-                                                                {is_training: True})
+            train_R2_T = sess.run(R2_of_batch(model_output, train_targets), {is_training: True})
+            train_RMSE_T = sess.run(RMSE_of_batch(model_output, train_targets),
+                                    {is_training: True})
             train_lossl.append(loss_value)
             output = 'Generation {}: train Loss = {:.5f}'.format((i + 1), loss_value)
             train_r2_tl.append(train_R2_T)
-            train_r2_yl.append(train_R2_Y)
-            train_r2_el.append(train_R2_E)
             train_rmse_tl.append(train_RMSE_T)
-            train_rmse_yl.append(train_RMSE_Y)
-            train_rmse_el.append(train_RMSE_E)
             log_train[0].append(loss_value)
             log_train[1].append(train_R2_T)
-            log_train[2].append(train_R2_Y)
-            log_train[3].append(train_R2_E)
-            log_train[4].append(train_RMSE_T)
-            log_train[5].append(train_RMSE_Y)
-            log_train[6].append(train_RMSE_E)
+            log_train[2].append(train_RMSE_T)
             print(output)  # 显示训练集上的loss值
 
         # 显示在测试集上各项指标
 
         if (i + 1)%eval_every == 0:
-            test_R2_T, test_R2_Y, test_R2_E = sess.run(R2_of_batch(test_output, test_targets), {is_training: False})
-            test_RMSE_T, test_RMSE_Y, test_RMSE_E = sess.run(RMSE_of_batch(test_output, test_targets),
-                                                             {is_training: False})
+            test_R2_T = sess.run(R2_of_batch(test_output, test_targets), {is_training: False})
+            test_RMSE_T = sess.run(RMSE_of_batch(test_output, test_targets),
+                                   {is_training: False})
             test_loss_value = sess.run(loss_in_testdata, {is_training: False})
-            test_RPD_T, test_RPD_Y, test_RPD_E = sess.run(RPD_of_batch(test_output, test_targets), {is_training: False})
+            test_RPD_T = sess.run(RPD_of_batch(test_output, test_targets), {is_training: False})
             test_lossl.append(test_loss_value)
             test_loss_output = 'Generation {}: test Loss = {:.5f}'.format((i + 1), test_loss_value)
             test_r2_tl.append(test_R2_T)
-            test_r2_yl.append(test_R2_Y)
-            test_r2_el.append(test_R2_E)
             test_rmse_tl.append(test_RMSE_T)
-            test_rmse_yl.append(test_RMSE_Y)
-            test_rmse_el.append(test_RMSE_E)
             test_rpd_tl.append(test_RPD_T)
-            test_rpd_yl.append(test_RPD_Y)
-            test_rpd_el.append(test_RPD_E)
             log_test[0].append(test_loss_value)
             log_test[1].append(test_R2_T)
-            log_test[2].append(test_R2_Y)
-            log_test[3].append(test_R2_E)
-            log_test[4].append(test_RMSE_T)
-            log_test[5].append(test_RMSE_Y)
-            log_test[6].append(test_RMSE_E)
-            log_test[7].append(test_RPD_T)
-            log_test[8].append(test_RPD_Y)
-            log_test[9].append(test_RPD_E)
+            log_test[2].append(test_RMSE_T)
+            log_test[3].append(test_RPD_T)
             print(test_loss_output)
             # 保存所有属性值
         if (i + 1)%SAVEValue == 0:
             save_Totest_file = str(i + 1) + save_test_file
             with open(save_Totest_file, "w", newline='') as f:
                 writer = csv.writer(f)
-                for a in range(10):
+                for a in range(4):
                     writer.writerows([log_test[a]])
             f.close()
             save_Totrain_file = str(i + 1) + save_train_file
             with open(save_Totrain_file, "w", newline='') as f:
                 writer = csv.writer(f)
-                for a in range(7):
+                for a in range(3):
                     writer.writerows([log_train[a]])
             f.close()
 
@@ -411,27 +365,9 @@ for i in tqdm.tqdm(range(generations)):
             #
             # 显示训练集/测试集R2函数变化
             plt.figure()
-            plt.subplot(1, 3, 1)
             plt.plot(output_indices, train_r2_tl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
             plt.plot(eval_indices, test_r2_tl, label='test dataset', linewidth=1.0, color='blue')
             plt.title(' R of Tensile')
-            plt.xlabel('Generation')
-            plt.ylabel('R')
-            plt.legend(loc=4, fancybox=True, shadow=True)
-
-            plt.subplot(1, 3, 2)
-            plt.plot(output_indices, train_r2_yl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
-            plt.plot(eval_indices, test_r2_yl, label='test dataset', linewidth=1.0, color='blue')
-            plt.title(' R of Yeild')
-            plt.xlabel('Generation')
-            plt.ylabel('R')
-            plt.legend(loc=4, fancybox=True, shadow=True)
-
-            plt.subplot(1, 3, 3)
-            plt.plot(output_indices, train_r2_el, label='train dataset', linewidth=1.0, color='red',
-                     linestyle='--')
-            plt.plot(eval_indices, test_r2_el, label='test dataset', linewidth=1.0, color='blue')
-            plt.title(' R of Elongation')
             plt.xlabel('Generation')
             plt.ylabel('R')
             plt.legend(loc=4, fancybox=True, shadow=True)
@@ -440,60 +376,30 @@ for i in tqdm.tqdm(range(generations)):
 
             # 显示训练集/测试集RMSE函数变化
             plt.figure()
-            plt.subplot(1, 3, 1)
             plt.plot(output_indices, train_rmse_tl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
             plt.plot(eval_indices, test_rmse_tl, label='test dataset', linewidth=1.0, color='blue')
             plt.title(' RMSE of Tensile')
             plt.xlabel('Generation')
             plt.ylabel('RMSE')
             plt.legend(loc=1, fancybox=True, shadow=True)
-
-            plt.subplot(1, 3, 2)
-            plt.plot(output_indices, train_rmse_yl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
-            plt.plot(eval_indices, test_rmse_yl, label='test dataset', linewidth=1.0, color='blue')
-            plt.title(' RMSE of Yeild')
-            plt.xlabel('Generation')
-            plt.ylabel('RMSE')
-            plt.legend(loc=1, fancybox=True, shadow=True)
-
-            plt.subplot(1, 3, 3)
-            plt.plot(output_indices, train_rmse_el, label='train dataset', linewidth=1.0, color='red',
-                     linestyle='--')
-            plt.plot(eval_indices, test_rmse_el, label='test dataset', linewidth=1.0, color='blue')
-            plt.title(' RMSE of Elongation')
-            plt.xlabel('Generation')
-            plt.ylabel('RMSE')
-            plt.legend(loc=1, fancybox=True, shadow=True)
+            plt.show()
             plt.savefig('RMSE_' + str(i + 1) + '.png')
             plt.show()
 
             # 显示测试集RPD函数变化
             plt.figure()
-            plt.subplot(1, 3, 1)
             plt.plot(eval_indices, test_rpd_tl, label='test dataset', linewidth=1.0, color='blue')
             plt.title(' RPD of Tensile')
             plt.xlabel('Generation')
             plt.ylabel('RPD')
             plt.legend(loc=2, fancybox=True, shadow=True)
-
-            plt.subplot(1, 3, 2)
-            plt.plot(eval_indices, test_rpd_yl, label='test dataset', linewidth=1.0, color='blue')
-            plt.title(' RPD of Yeild')
-            plt.xlabel('Generation')
-            plt.ylabel('RPD')
-            plt.legend(loc=2, fancybox=True, shadow=True)
-
-            plt.subplot(1, 3, 3)
-            plt.plot(eval_indices, test_rpd_el, label='test dataset', linewidth=1.0, color='blue')
-            plt.title(' RPD of Elongation')
-            plt.xlabel('Generation')
-            plt.ylabel('RPD')
-            plt.legend(loc=2, fancybox=True, shadow=True)  # loc=2 表示'upperleft'
             plt.savefig('RPD_' + str(i + 1) + '.png')
             plt.show()
 
             plt.close()
-            print('训练集上一个批次数据通过inference的前十个输出结果\n', sess.run(model_output, {is_training: True})[:10])
+            print('训练集上一个批次数据的前10个数据\n', sess.run(train_targets)[:10])
+            print('测试集上一个批次数据的前10个数据\n', sess.run(test_targets)[:10])
+            print('训练集上一个批次数据通过inference的前10个输出结果\n', sess.run(model_output, {is_training: True})[:10])
             print('测试集上一个批次数据中通过inference后的前10个输出结果\n', sess.run(test_output, {is_training: False})[:10])
         if i%Savemodel == 0:
             saver.save(sess, os.path.join(MODEL_SAVE_PATH, MODEL_NAME), global_step=i)
