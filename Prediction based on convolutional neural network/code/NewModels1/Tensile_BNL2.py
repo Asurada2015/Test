@@ -12,9 +12,9 @@ sess = tf.Session()
 
 # 设置模型超参数
 
-output_every = 100  # 训练输出间隔/控制图像标尺
+output_every = 50  # 训练输出间隔/控制图像标尺
 generations = 5000  # 迭代次数 20000
-eval_every = 100  # 测试输出间隔/控制图像标尺
+eval_every = 50  # 测试输出间隔/控制图像标尺
 image_height = 20  # 图片高度
 image_width = 20  # 图片宽度
 num_channels = 1  # 图片通道数
@@ -22,10 +22,10 @@ num_targets = 1  # 预测指标数
 MIN_AFTER_DEQUEUE = 1000  # 管道最小容量
 BATCH_SIZE = 256  # 批处理数量  128 test use 3
 REGULARAZTION_RATE = 0.00001  # 正则化项在损失函数中的系数,如果使用0值则表示不使用正则项
-SAVEValue = 5000  # 保存模型各项参数值
+SAVEValue = 1000  # 保存模型各项参数值
 save_test_file = 'testParameter.csv'
 save_train_file = 'trainParameter.csv'
-ViewGraph = 1000
+ViewGraph = 500
 Savemodel = 5000
 MODEL_SAVE_PATH = './Tensile_log'
 MODEL_NAME = 'model.ckpt'
@@ -90,7 +90,7 @@ def inference(input_images, batch_size, is_training):
 
     # 第一卷积层
     with tf.variable_scope('conv1') as scope:
-        conv1 = tf.layers.conv2d(input_images, 8, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
+        conv1 = tf.layers.conv2d(input_images, 64, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                  kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
@@ -101,7 +101,7 @@ def inference(input_images, batch_size, is_training):
 
     # 第二个卷积层
     with tf.variable_scope('conv2') as scope:
-        conv2 = tf.layers.conv2d(pool1, 16, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
+        conv2 = tf.layers.conv2d(pool1, 128, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                  kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
@@ -113,7 +113,7 @@ def inference(input_images, batch_size, is_training):
 
     # 第三个卷积层
     with tf.variable_scope('conv3') as scope:
-        conv3 = tf.layers.conv2d(pool2, 32, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
+        conv3 = tf.layers.conv2d(pool2, 256, kernel_size=(3, 3), strides=(1, 1), padding='VALID', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                  kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
@@ -129,42 +129,47 @@ def inference(input_images, batch_size, is_training):
 
     # 全连接层1
     with tf.variable_scope('full1') as scope:
-        full_layer1 = tf.layers.dense(reshaped_output, 512, activation=None, use_bias=False,
+        full_layer1 = tf.layers.dense(reshaped_output, 256, activation=None, use_bias=False,
                                       kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                       kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE))
         full_layer1 = tf.layers.batch_normalization(full_layer1, training=is_training)
         full_layer1 = tf.nn.relu(full_layer1)
 
-    # 全连接层2
-    with tf.variable_scope('full2') as scope:
-        # 第二个全连接层有192个输出
-        full_layer2 = tf.layers.dense(full_layer1, 256, activation=None, use_bias=False,
-                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
-        full_layer2 = tf.layers.batch_normalization(full_layer2, training=is_training)
-        full_layer2 = tf.nn.relu(full_layer2)
+    # # 全连接层2
+    # with tf.variable_scope('full2') as scope:
+    #     # 第二个全连接层有192个输出
+    #     full_layer2 = tf.layers.dense(full_layer1, 256, activation=None, use_bias=False,
+    #                                   kernel_initializer=tf.contrib.layers.xavier_initializer())
+    #     full_layer2 = tf.layers.batch_normalization(full_layer2, training=is_training)
+    #     full_layer2 = tf.nn.relu(full_layer2)
+    #
+    # # 全连接层3
+    # with tf.variable_scope('full3') as scope:
+    #     # 第二个全连接层有192个输出
+    #     full_layer3 = tf.layers.dense(full_layer2, 128, activation=None, use_bias=False,
+    #                                   kernel_initializer=tf.contrib.layers.xavier_initializer())
+    #     full_layer3 = tf.layers.batch_normalization(full_layer3, training=is_training)
+    #     full_layer3 = tf.nn.relu(full_layer3)
+    #
+    # # 全连接层4
+    # with tf.variable_scope('full4') as scope:
+    #     # 第二个全连接层有192个输出
+    #     full_layer4 = tf.layers.dense(full_layer3, 64, activation=None, use_bias=False,
+    #                                   kernel_initializer=tf.contrib.layers.xavier_initializer())
+    #     full_layer4 = tf.layers.batch_normalization(full_layer4, training=is_training)
+    #     full_layer4 = tf.nn.relu(full_layer4)
+    #
+    # # 最后的全连接层只有1个输出
+    # with tf.variable_scope('full5') as scope:
+    #     full_weight5 = truncated_normal_var(name='full_mult5', shape=[64, num_targets], dtype=tf.float32)
+    #     full_bias5 = zero_var(name='full_bias5', shape=[num_targets], dtype=tf.float32)
+    #     final_output = tf.add(tf.matmul(full_layer4, full_weight5), full_bias5)
 
-    # 全连接层3
-    with tf.variable_scope('full3') as scope:
-        # 第二个全连接层有192个输出
-        full_layer3 = tf.layers.dense(full_layer2, 128, activation=None, use_bias=False,
-                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
-        full_layer3 = tf.layers.batch_normalization(full_layer3, training=is_training)
-        full_layer3 = tf.nn.relu(full_layer3)
-
-    # 全连接层4
-    with tf.variable_scope('full4') as scope:
-        # 第二个全连接层有192个输出
-        full_layer4 = tf.layers.dense(full_layer3, 64, activation=None, use_bias=False,
-                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
-        full_layer4 = tf.layers.batch_normalization(full_layer4, training=is_training)
-        full_layer4 = tf.nn.relu(full_layer4)
-
-    # 最后的全连接层只有1个输出
-    with tf.variable_scope('full5') as scope:
-        full_weight5 = truncated_normal_var(name='full_mult5', shape=[64, num_targets], dtype=tf.float32)
-        full_bias5 = zero_var(name='full_bias5', shape=[num_targets], dtype=tf.float32)
-        final_output = tf.add(tf.matmul(full_layer4, full_weight5), full_bias5)
-
+    # 测试只有一层全连接层时使用
+    with tf.variable_scope('full') as scope:
+        full_weight = truncated_normal_var(name='full_mult', shape=[256, num_targets], dtype=tf.float32)
+        full_bias = zero_var(name='full_bias5', shape=[num_targets], dtype=tf.float32)
+        final_output = tf.add(tf.matmul(full_layer1, full_weight), full_bias)
     return (final_output)
 
 
@@ -356,11 +361,11 @@ for i in tqdm.tqdm(range(generations)):
             plt.plot(output_indices, train_lossl, label='loss in train dataset', linewidth=1.0, color='red',
                      linestyle='--')
             plt.plot(eval_indices, test_lossl, label='loss in test dataset', linewidth=1.0, color='blue')
-            plt.title(' Loss per Generation of train/test dataset')
+            plt.title(' Loss of Tensile')
             plt.xlabel('Generation')
             plt.ylabel('Loss')
             plt.legend(loc=1, fancybox=True, shadow=True)
-            plt.savefig('loss_' + str(i + 1) + '.png')
+            plt.savefig('loss_' + str(i + 1) + '.png', dpi=300)
             plt.show()
             #
             # 显示训练集/测试集R2函数变化
@@ -371,7 +376,7 @@ for i in tqdm.tqdm(range(generations)):
             plt.xlabel('Generation')
             plt.ylabel('R')
             plt.legend(loc=4, fancybox=True, shadow=True)
-            plt.savefig('R_' + str(i + 1) + '.png')
+            plt.savefig('R_' + str(i + 1) + '.png', dpi=300)
             plt.show()
 
             # 显示训练集/测试集RMSE函数变化
@@ -382,8 +387,7 @@ for i in tqdm.tqdm(range(generations)):
             plt.xlabel('Generation')
             plt.ylabel('RMSE')
             plt.legend(loc=1, fancybox=True, shadow=True)
-            plt.show()
-            plt.savefig('RMSE_' + str(i + 1) + '.png')
+            plt.savefig('RMSE_' + str(i + 1) + '.png', dpi=300)
             plt.show()
 
             # 显示测试集RPD函数变化
@@ -393,9 +397,8 @@ for i in tqdm.tqdm(range(generations)):
             plt.xlabel('Generation')
             plt.ylabel('RPD')
             plt.legend(loc=2, fancybox=True, shadow=True)
-            plt.savefig('RPD_' + str(i + 1) + '.png')
+            plt.savefig('RPD_' + str(i + 1) + '.png', dpi=300)
             plt.show()
-
             plt.close()
             print('训练集上一个批次数据的前10个数据\n', sess.run(train_targets)[:10])
             print('测试集上一个批次数据的前10个数据\n', sess.run(test_targets)[:10])
