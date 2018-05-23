@@ -31,8 +31,8 @@ MODEL_NAME = 'model.ckpt'
 # 数据输入
 NUM_EPOCHS = 8000  # 批次轮数
 NUM_THREADS = 3  # 线程数
-TRAIN_FILE = '235b_train.csv'
-TEST_FILE = '235b_test.csv'
+TRAIN_FILE = '235b_train_1.csv'
+TEST_FILE = '235b_test_1.csv'
 
 # 自适应学习率衰减
 learning_rate = 0.1  # 初始学习率

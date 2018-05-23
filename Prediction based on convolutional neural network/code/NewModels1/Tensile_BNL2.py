@@ -13,7 +13,7 @@ sess = tf.Session()
 # 设置模型超参数
 
 output_every = 50  # 训练输出间隔/控制图像标尺
-generations = 50002  # 迭代次数 20000
+generations = 50000  # 迭代次数 20000
 eval_every = 50  # 测试输出间隔/控制图像标尺
 image_height = 20  # 图片高度
 image_width = 20  # 图片宽度
@@ -32,8 +32,8 @@ MODEL_NAME = 'model.ckpt'
 # 数据输入
 NUM_EPOCHS = 5000  # 批次轮数
 NUM_THREADS = 3  # 线程数
-TRAIN_FILE = 'a_train.csv'
-TEST_FILE = 'a_test.csv'
+TRAIN_FILE = '235b_train_1.csv'
+TEST_FILE = '235b_test_1.csv'
 
 # 自适应学习率衰减
 learning_rate = 0.1  # 初始学习率
@@ -204,11 +204,17 @@ def inference(input_images, batch_size, is_training):
     return (final_output)
 
 
-# 损失函数MSE
-def cnn_loss(logits, targets):
-    mse = tf.reduce_mean(tf.square(logits - targets), name='mse')  # 均方误差
+# 训练集损失函数带L2正则化MSE
+def train_loss(logits, targets):
+    mse = tf.reduce_mean(tf.square(logits - targets), name='trmse')  # 均方误差
     regularization_loss = tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))  # weight上正则化损失
     mse = mse + regularization_loss
+    return mse
+
+
+# 测试集损失函数不需要带L2正则化项的MSE
+def test_loss(logits, targets):
+    mse = tf.reduce_mean(tf.square(logits - targets), name='tsmse')  # 均方误差
     return mse
 
 
@@ -298,8 +304,8 @@ with tf.variable_scope('model_definition') as scope:
     test_output = inference(test_images, BATCH_SIZE, is_training)
 # 声明损失函数
 print('Declare Loss Function.')
-loss = cnn_loss(model_output, train_targets)
-loss_in_testdata = cnn_loss(test_output, test_targets)
+loss = train_loss(model_output, train_targets)
+loss_in_testdata = test_loss(test_output, test_targets)
 
 # 创建训练操作
 print('Create the Train Operation')
