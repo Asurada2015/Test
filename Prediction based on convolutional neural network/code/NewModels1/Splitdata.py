@@ -6,17 +6,17 @@ import numpy as np
 """将DT.TrainValue.csv数据分成train_value和test_value两个文件，其中train_value有27000个数据，test_value有11691个数据"""
 labels = []
 data = []
-a_train_file = '235b_train.csv'
-a_test_file = '235b_test.csv'
-a_file = 'Q235Bfull.csv'
+a_train_file = '235b_train_1.csv'
+a_test_file = '235b_test_1.csv'
+a_file = 'Q235Bfull_1.csv'
 
-seed = 2
+seed = 7
 np.random.seed(seed)
-train_indices = np.random.choice(9308, 7000, replace=False)
-residue = np.array(list(set(range(9308)) - set(train_indices)))
+train_indices = np.random.choice(15655, 10920, replace=False)
+residue = np.array(list(set(range(15655)) - set(train_indices)))
 # print(np.array(train_indices).shape)  # (27000,)
 # print(residue.shape)  # (10944,)
-test_indices = np.random.choice(len(residue), 2000, replace=False)
+test_indices = np.random.choice(len(residue), 4680, replace=False)
 # print(np.array(test_indices).shape)  # (10500,)
 
 with open(a_file)as afile:
