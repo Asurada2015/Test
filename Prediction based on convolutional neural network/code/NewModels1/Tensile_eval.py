@@ -18,21 +18,17 @@ image_width = 20  # 图片宽度
 num_channels = 1  # 图片通道数
 num_targets = 1  # 预测指标数
 MIN_AFTER_DEQUEUE = 100  # 管道最小容量
-save_test_file = 'testParameter.csv'
-save_train_file = 'trainParameter.csv'
 MODEL_SAVE_PATH = './Tensile_log'
 MODEL_NAME = 'model.ckpt'
-NUM_THREADS = 3  # 线程数
+NUM_THREADS = 1  # 线程数
 TRAIN_FILE = '235b_train_1.csv'
 TEST_FILE = '235b_test_1.csv'
 EVAL_FILE = '235b_test_1.csv'
+save_eval_file = 'eval.csv'
 
 # 自适应学习率衰减
-learning_rate = 0.1  # 初始学习率
-lr_decay = 0.9  # 学习率衰减速度
-num_gens_to_wait = 200  # 学习率更新周期
 eval_epoch = 1
-eval_batch = 1000
+eval_batch = 10
 
 
 # RandomShuffleQueue '_1_shuffle_batch/random_shuffle_queue' is closed and has insufficient elements (requested 3000, current size 1680)
@@ -66,9 +62,8 @@ def create_pipeline(filename, batch_size, num_threads, num_epochs=None):
     min_after_dequeue = MIN_AFTER_DEQUEUE
     # capacity = min_after_dequeue + batch_size
     capacity = min_after_dequeue + (num_threads + 3*batch_size)
-    example_batch, label_batch = tf.train.shuffle_batch(
-        [example, label], batch_size=batch_size, num_threads=num_threads, capacity=capacity,
-        min_after_dequeue=min_after_dequeue)
+    example_batch, label_batch = tf.train.batch(
+        [example, label], batch_size=batch_size, num_threads=num_threads, capacity=capacity)
     return example_batch, label_batch
 
 
@@ -192,11 +187,9 @@ def inference(input_images, batch_size, is_training):
 
 
 # 获取数据
-print('Now getting and transforming Data')
 eval_images, eval_targets = create_pipeline(EVAL_FILE, batch_size=eval_batch, num_threads=3,
                                             num_epochs=eval_epoch)
 # 声明模型
-print('Creating the CNN model.')
 is_training = tf.placeholder(tf.bool)
 with tf.variable_scope('model_definition') as scope:
     eval_output = inference(eval_images, batch_size=eval_batch, is_training=False)
@@ -209,23 +202,31 @@ sess.run([init_op, local_init_op])
 coord = tf.train.Coordinator()
 threads = tf.train.start_queue_runners(coord=coord, sess=sess)
 
-# 训练CNN模型
-
 saver = tf.train.Saver()
-# print(sess.run(eval_images))
-# print(sess.run(eval_output))
 # tf.train.get_checkpoint_state函数会通过checkpoint文件自动找到目录中最新模型的文件名
 ckpt = tf.train.get_checkpoint_state(MODEL_SAVE_PATH)
 if ckpt and ckpt.model_checkpoint_path:
     # 加载模型
     saver.restore(sess, ckpt.model_checkpoint_path)
     # 通过文件名得到模型保存是迭代的轮数
-    print('eval label')
-    print(sess.run(eval_targets))
-    print('eval output')
-    print(sess.run(eval_output))
+    # print('eval output')
+    # Eval_output = sess.run(eval_output)
+    # print(Eval_output)
+    for i in range(10):
+        print('the {} batch of data '.format(i+1))
+        print(sess.run(eval_targets))
 else:
     print('No checkpoint file found')
+
+# 保存预测模型输出的值
+# log_eval = []
+# for i in Eval_output:
+#     log_eval.append(i)
+# with open(save_eval_file, "w", newline='') as f:
+#     writer = csv.writer(f)
+#     for a in range(Eval_output.__len__()):
+#         writer.writerows([log_eval[a]])
+# f.close()
 
 # 关闭线程和Session
 coord.request_stop()
