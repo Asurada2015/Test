@@ -13,7 +13,7 @@ sess = tf.Session()
 # 设置模型超参数
 
 output_every = 50  # 训练输出间隔/控制图像标尺
-generations = 50000  # 迭代次数 20000
+generations = 5002  # 迭代次数 20000
 eval_every = 50  # 测试输出间隔/控制图像标尺
 image_height = 20  # 图片高度
 image_width = 20  # 图片宽度
@@ -26,7 +26,7 @@ SAVEValue = 1000  # 保存模型各项参数值
 save_test_file = 'testParameter.csv'
 save_train_file = 'trainParameter.csv'
 ViewGraph = 500
-Savemodel = 10000
+Savemodel = 5000
 MODEL_SAVE_PATH = './Tensile_log'
 MODEL_NAME = 'model.ckpt'
 # 数据输入
@@ -39,6 +39,9 @@ TEST_FILE = '235b_test_1.csv'
 learning_rate = 0.1  # 初始学习率
 lr_decay = 0.9  # 学习率衰减速度
 num_gens_to_wait = 200  # 学习率更新周期
+
+# 训练与测试
+TRAIN_OR_TEST = True  # 如果训练并且
 
 
 # 读取数据
@@ -339,14 +342,17 @@ for b in range(4):
 
 saver = tf.train.Saver()
 for i in tqdm.tqdm(range(generations)):
-    _, loss_value = sess.run([train_op, loss], {is_training: True})
+    # _, loss_value = sess.run([train_op, loss], {is_training: True})
+    # 根据Udacity中Batch normalization的教程，除了在梯度下降的时候使用is_training:True其余时候均将其设置为False
     # 显示在训练集上各项指标
     # 因为在前100次迭代过程中会有明显的下降过程不能分清细节
+    sess.run(train_op, {is_training: True})
     if i >= 100:
         if (i + 1)%output_every == 0:
-            train_R2_T = sess.run(R2_of_batch(model_output, train_targets), {is_training: True})
+            train_R2_T = sess.run(R2_of_batch(model_output, train_targets), {is_training: False})
             train_RMSE_T = sess.run(RMSE_of_batch(model_output, train_targets),
-                                    {is_training: True})
+                                    {is_training: False})
+            loss_value = sess.run(loss, {is_training: False})
             train_lossl.append(loss_value)
             output = 'Generation {}: train Loss = {:.5f}'.format((i + 1), loss_value)
             train_r2_tl.append(train_R2_T)
@@ -439,7 +445,7 @@ for i in tqdm.tqdm(range(generations)):
             plt.close()
             print('训练集上一个批次数据的前10个数据\n', sess.run(train_targets)[:10])
             print('测试集上一个批次数据的前10个数据\n', sess.run(test_targets)[:10])
-            print('训练集上一个批次数据通过inference的前10个输出结果\n', sess.run(model_output, {is_training: True})[:10])
+            print('训练集上一个批次数据通过inference的前10个输出结果\n', sess.run(model_output, {is_training: False})[:10])
             print('测试集上一个批次数据中通过inference后的前10个输出结果\n', sess.run(test_output, {is_training: False})[:10])
         if i%Savemodel == 0:
             saver.save(sess, os.path.join(MODEL_SAVE_PATH, MODEL_NAME), global_step=i)
