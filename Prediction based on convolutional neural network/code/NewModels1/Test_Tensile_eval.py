@@ -26,7 +26,7 @@ save_eval_file = 'eval.csv'
 
 # 自适应学习率衰减
 eval_epoch = 1
-eval_batch = 400
+eval_batch = 4000
 
 
 # RandomShuffleQueue '_1_shuffle_batch/random_shuffle_queue' is closed and has insufficient elements (requested 3000, current size 1680)
@@ -202,24 +202,31 @@ ckpt = tf.train.get_checkpoint_state(MODEL_SAVE_PATH)
 if ckpt and ckpt.model_checkpoint_path:
     # 加载模型
     saver.restore(sess, ckpt.model_checkpoint_path)
-    # 通过文件名得到模型保存是迭代的轮数
-    # print('eval output')
-    # Eval_output = sess.run(eval_output)
-    # print(Eval_output)
-
-    print(sess.run([eval_targets, eval_num]))
+    # 这里务必要同时运行并得到相应的结果
+    Eval_Image, Eval_Targets, Eval_Nums, Eval_Outputs = sess.run([eval_images, eval_targets, eval_num, eval_output])
+    # 打印数据
+    # print('The Targets of eval batch\n')
+    # print(Eval_Targets)
+    # print('The Nums of eval batch\n')
+    # print(Eval_Nums)
+    # print('The Output of eval batch\n')
+    # print(Eval_Outputs)
 else:
     print('No checkpoint file found')
 
 # 保存预测模型输出的值
-# log_eval = []
-# for i in Eval_output:
-#     log_eval.append(i)
-# with open(save_eval_file, "w", newline='') as f:
-#     writer = csv.writer(f)
-#     for a in range(Eval_output.__len__()):
-#         writer.writerows([log_eval[a]])
-# f.close()
+log_eval = []
+for i in Eval_Targets:
+    log_eval.append(i)
+for i in Eval_Nums:
+    log_eval.append(i)
+for i in Eval_Outputs:
+    log_eval.append(i)
+with open(save_eval_file, "w", newline='') as f:
+    writer = csv.writer(f)
+    for a in range(log_eval.__len__()):
+        writer.writerows([log_eval[a]])
+f.close()
 
 # 关闭线程和Session
 coord.request_stop()
