@@ -26,7 +26,7 @@ save_eval_file = 'eval.csv'
 
 # 自适应学习率衰减
 eval_epoch = 1
-eval_batch = 4000
+eval_batch = 10
 
 
 # RandomShuffleQueue '_1_shuffle_batch/random_shuffle_queue' is closed and has insufficient elements (requested 3000, current size 1680)
@@ -181,6 +181,52 @@ def inference(input_images, batch_size, is_training):
     return (final_output)
 
 
+# 定义评价函数
+# 计算MAE平均绝对误差
+def MAE(logits, targets):
+    mae = tf.reduce_mean(tf.abs(tf.subtract(logits, targets)))  # 平均绝对误差
+    return [mae]
+# 因为后面我们要将其保存到csv文件中，为方便起见，我们使用list这种iterable的对象储存输出的评价函数值
+
+# 计算MAPE 平均绝对百分误差
+def MAPE(logits, targets):
+    mape = tf.reduce_mean(tf.truediv(tf.abs(tf.subtract(logits, targets)), targets))  # 平均绝对百分比误差
+    return [mape]
+
+
+# 计算RMSE均方根误差
+def RMSE(logits, targets):
+    rmse = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(logits, targets))))  # 均方根误差
+    return [rmse]
+
+
+# 计算mse均方误差
+def MSE(logits, targets):
+    mse = tf.reduce_mean(tf.square(logits - targets), name='mse')  # 均方误差
+    return [mse]
+
+
+# 计算RPD值
+def RPD(logits, targets):
+    mean_of_logits = tf.reduce_mean(logits)
+    stdev = tf.sqrt(tf.divide(tf.reduce_sum(tf.square(tf.subtract(logits, mean_of_logits))),
+                              (eval_batch - 1)))  # 测定值标准差
+    rmse = RMSE(logits, targets)  # 测定值均方误差
+    rpd = tf.divide(stdev, rmse)
+    return [rpd]
+
+
+# 计算R系数
+def R2(logits, targets):
+    mean_targets = tf.reduce_mean(targets)
+    # ss_tot总体平方和
+    ss_tot = tf.reduce_sum(tf.square(tf.subtract(targets, mean_targets)))
+    # ss_err残差平方和
+    ss_err = tf.reduce_sum(tf.square(tf.subtract(logits, targets)))
+    r2 = 1 - (tf.truediv(ss_err, ss_tot))
+    return [r2]
+
+
 # 获取数据
 eval_images, eval_targets, eval_num = create_pipeline(EVAL_FILE, batch_size=eval_batch, num_threads=3)
 # 声明模型
@@ -214,6 +260,14 @@ if ckpt and ckpt.model_checkpoint_path:
 else:
     print('No checkpoint file found')
 
+# 因为这个函数中使用了tensorflow所定义的矩阵运算的方法，所以此处一定要用Sess.run的方法来计算
+Mae = MAE(Eval_Outputs, Eval_Targets)
+Mape = MAPE(Eval_Outputs, Eval_Targets)
+Mse = MSE(Eval_Outputs, Eval_Targets)
+Rmse = RMSE(Eval_Outputs, Eval_Targets)
+R = R2(Eval_Outputs, Eval_Targets)
+Rpd = RPD(Eval_Outputs, Eval_Targets)
+mae, mape, mse, rmse, r, rpd = sess.run([Mae, Mape, Mse, Rmse, R, Rpd])
 # 保存预测模型输出的值
 log_eval = []
 for i in Eval_Targets:
@@ -222,11 +276,19 @@ for i in Eval_Nums:
     log_eval.append(i)
 for i in Eval_Outputs:
     log_eval.append(i)
+log_eval.append(mae)
+log_eval.append(mape)
+log_eval.append(mse)
+log_eval.append(rmse)
+log_eval.append(r)
+log_eval.append(rpd)
 with open(save_eval_file, "w", newline='') as f:
     writer = csv.writer(f)
     for a in range(log_eval.__len__()):
         writer.writerows([log_eval[a]])
 f.close()
+
+print('The Mae is {}, Mape is {}, Mse is {}, Rmse is {}, R is {}, Rpd is {}'.format(mae, mape, mse, rmse, r, rpd))
 
 # 关闭线程和Session
 coord.request_stop()
