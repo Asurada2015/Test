@@ -245,8 +245,8 @@ def RMSE_of_batch(logits, targets):
 
 # 计算RPD值
 def RPD(logits, targets):
-    mean_of_logits = tf.reduce_mean(logits)
-    stdev = tf.sqrt(tf.divide(tf.reduce_sum(tf.square(tf.subtract(logits, mean_of_logits))),
+    mean_of_targets = tf.reduce_mean(targets)
+    stdev = tf.sqrt(tf.divide(tf.reduce_sum(tf.square(tf.subtract(targets, mean_of_targets))),
                               tf.cast((BATCH_SIZE - 1), tf.double)))  # 测定值标准差
     rmse = RMSE(logits, targets)  # 测定值均方误差
     rpd = tf.divide(stdev, rmse)

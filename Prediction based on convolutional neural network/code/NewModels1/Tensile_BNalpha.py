@@ -9,7 +9,7 @@ import os
 ops.reset_default_graph()
 
 sess = tf.Session()
-
+"""alpha版的目的在于寻找最好的模型savemodel参数会去掉而使用保存最好的模型值来取代,所以每一次都会运行所有指标"""
 # 设置模型超参数
 
 output_every = 50  # 训练输出间隔/控制图像标尺
@@ -21,16 +21,14 @@ num_channels = 1  # 图片通道数
 num_targets = 1  # 预测指标数
 MIN_AFTER_DEQUEUE = 1000  # 管道最小容量
 BATCH_SIZE = 128  # 批处理数量  128 test use 3
-REGULARAZTION_RATE = 0.00001  # 正则化项在损失函数中的系数,如果使用0值则表示不使用正则项
-SAVEValue = 1000  # 保存模型各项参数值
+SAVEValue = 5000  # 保存模型各项参数值
 save_test_file = 'testParameter.csv'
 save_train_file = 'trainParameter.csv'
 ViewGraph = 500
-Savemodel = 5000
 MODEL_SAVE_PATH = './Tensile_log'
 MODEL_NAME = 'model.ckpt'
 # 数据输入
-NUM_EPOCHS = 5000  # 批次轮数
+NUM_EPOCHS = 8000  # 批次轮数
 NUM_THREADS = 3  # 线程数
 TRAIN_FILE = '235b_train_1.csv'
 TEST_FILE = '235b_test_1.csv'
@@ -39,9 +37,6 @@ TEST_FILE = '235b_test_1.csv'
 learning_rate = 0.1  # 初始学习率
 lr_decay = 0.9  # 学习率衰减速度
 num_gens_to_wait = 200  # 学习率更新周期
-
-# 训练与测试
-TRAIN_OR_TEST = True  # 如果训练并且
 
 
 # 读取数据
@@ -95,7 +90,6 @@ def inference(input_images, batch_size, is_training):
     with tf.variable_scope('conv1') as scope:
         conv1 = tf.layers.conv2d(input_images, 64, kernel_size=(3, 3), strides=(1, 1), padding='SAME', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
         conv1 = tf.layers.batch_normalization(conv1, training=is_training)
         relu_conv1 = tf.nn.relu(conv1, name='relu_conv1')
@@ -106,7 +100,6 @@ def inference(input_images, batch_size, is_training):
     with tf.variable_scope('conv2') as scope:
         conv2 = tf.layers.conv2d(pool1, 64, kernel_size=(3, 3), strides=(1, 1), padding='SAME', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
         conv2 = tf.layers.batch_normalization(conv2, training=is_training)
         relu_conv2 = tf.nn.relu(conv2, name='relu_conv2')
@@ -118,7 +111,6 @@ def inference(input_images, batch_size, is_training):
     with tf.variable_scope('conv3') as scope:
         conv3 = tf.layers.conv2d(pool2, 128, kernel_size=(3, 3), strides=(1, 1), padding='SAME', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
         conv3 = tf.layers.batch_normalization(conv3, training=is_training)
         relu_conv3 = tf.nn.relu(conv3, name='relu_conv3')
@@ -130,7 +122,6 @@ def inference(input_images, batch_size, is_training):
     with tf.variable_scope('conv4') as scope:
         conv4 = tf.layers.conv2d(pool3, 128, kernel_size=(3, 3), strides=(1, 1), padding='SAME', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                 # kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
         conv4 = tf.layers.batch_normalization(conv4, training=is_training)
         relu_conv4 = tf.nn.relu(conv4, name='relu_conv4')
@@ -142,23 +133,21 @@ def inference(input_images, batch_size, is_training):
     with tf.variable_scope('conv5') as scope:
         conv5 = tf.layers.conv2d(pool4, 256, kernel_size=(3, 3), strides=(1, 1), padding='SAME', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                 # kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
         conv5 = tf.layers.batch_normalization(conv5, training=is_training)
-        relu_conv5 = tf.nn.relu(conv5, name='relu_conv5')
+        relu_conv5 = tf.nn.relu(conv5, name='relu_conv4')
 
-        # 池化层/下采样层
-    pool5 = tf.nn.max_pool(relu_conv5, ksize=[1, 2, 2, 1], strides=[1, 1, 1, 1], padding='SAME', name='pool_layer5')
+    # 池化层/下采样层
+    pool5 = tf.nn.max_pool(relu_conv5, ksize=[1, 2, 2, 1], strides=[1, 1, 1, 1], padding='SAME', name='pool_layer4')
+
     # 光栅化处理，将其打平方便和全连接层进行连接
     reshaped_output = tf.reshape(pool5, [batch_size, -1])
     reshaped_dim = reshaped_output.get_shape()[1].value
 
     # 全连接层1
     with tf.variable_scope('full1') as scope:
-        full_layer1 = tf.layers.dense(reshaped_output, 512, activation=None, use_bias=False,
-                                      kernel_initializer=tf.contrib.layers.xavier_initializer()
-                                      # , kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE)
-                                      )
+        full_layer1 = tf.layers.dense(reshaped_output, 256, activation=None, use_bias=False,
+                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
         full_layer1 = tf.layers.batch_normalization(full_layer1, training=is_training)
         full_layer1 = tf.nn.relu(full_layer1)
 
@@ -166,10 +155,7 @@ def inference(input_images, batch_size, is_training):
     with tf.variable_scope('full2') as scope:
         # 第二个全连接层有192个输出
         full_layer2 = tf.layers.dense(full_layer1, 256, activation=None, use_bias=False,
-                                      kernel_initializer=tf.contrib.layers.xavier_initializer()
-                                      # , kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE)
-                                      )
-
+                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
         full_layer2 = tf.layers.batch_normalization(full_layer2, training=is_training)
         full_layer2 = tf.nn.relu(full_layer2)
     #
@@ -177,9 +163,7 @@ def inference(input_images, batch_size, is_training):
     with tf.variable_scope('full3') as scope:
         # 第二个全连接层有192个输出
         full_layer3 = tf.layers.dense(full_layer2, 128, activation=None, use_bias=False,
-                                      kernel_initializer=tf.contrib.layers.xavier_initializer()
-                                      # , kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE)
-                                      )
+                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
         full_layer3 = tf.layers.batch_normalization(full_layer3, training=is_training)
         full_layer3 = tf.nn.relu(full_layer3)
 
@@ -187,12 +171,10 @@ def inference(input_images, batch_size, is_training):
     with tf.variable_scope('full4') as scope:
         # 第二个全连接层有192个输出
         full_layer4 = tf.layers.dense(full_layer3, 64, activation=None, use_bias=False,
-                                      kernel_initializer=tf.contrib.layers.xavier_initializer()
-                                      # , kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE)
-                                      )
+                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
         full_layer4 = tf.layers.batch_normalization(full_layer4, training=is_training)
         full_layer4 = tf.nn.relu(full_layer4)
-    #
+
     # # 最后的全连接层只有1个输出
     # with tf.variable_scope('full5') as scope:
     #     full_weight5 = truncated_normal_var(name='full_mult5', shape=[64, num_targets], dtype=tf.float32)
@@ -207,17 +189,22 @@ def inference(input_images, batch_size, is_training):
     return (final_output)
 
 
-# 训练集损失函数带L2正则化MSE
-def train_loss(logits, targets):
-    mse = tf.reduce_mean(tf.square(logits - targets), name='trmse')  # 均方误差
-    regularization_loss = tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))  # weight上正则化损失
-    mse = mse + regularization_loss
-    return mse
+# 定义评价函数
+# 计算MAE平均绝对误差
+def MAE(logits, targets):
+    mae = tf.reduce_mean(tf.abs(tf.subtract(logits, targets)))  # 平均绝对误差
+    return mae
 
 
-# 测试集损失函数不需要带L2正则化项的MSE
-def test_loss(logits, targets):
-    mse = tf.reduce_mean(tf.square(logits - targets), name='tsmse')  # 均方误差
+# 计算MAPE 平均绝对百分误差
+def MAPE(logits, targets):
+    mape = tf.reduce_mean(tf.truediv(tf.abs(tf.subtract(logits, targets)), targets))  # 平均绝对百分比误差
+    return mape
+
+
+# 损失函数MSE
+def cnn_loss(logits, targets):
+    mse = tf.reduce_mean(tf.square(logits - targets), name='mse')  # 均方误差
     return mse
 
 
@@ -242,50 +229,20 @@ def R2(logits, targets):
     return r2
 
 
-# 三种指标的R系数
-def R2_of_batch(logits, targets):
-    trans_logits = tf.transpose(logits)
-    logits_Tensile = tf.unstack(tf.cast(trans_logits, tf.double))
-    trans_targets = tf.transpose(targets)
-    targets_Tensile = tf.unstack(tf.cast(trans_targets, tf.double))
-    r2_Tensile = R2(logits_Tensile, targets_Tensile)
-    return r2_Tensile
-
-
 # 计算RMSE均方根误差
 def RMSE(logits, targets):
     rmse = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(logits, targets))))  # 均方根误差
     return rmse
 
 
-# 三种指标的RMSE系数
-def RMSE_of_batch(logits, targets):
-    trans_logits = tf.transpose(logits)
-    logits_Tensile = tf.unstack(tf.cast(trans_logits, tf.double))
-    trans_targets = tf.transpose(targets)
-    targets_Tensile = tf.unstack(tf.cast(trans_targets, tf.double))
-    rmse_Tensile = RMSE(logits_Tensile, targets_Tensile)
-    return rmse_Tensile
-
-
 # 计算RPD值
 def RPD(logits, targets):
     mean_of_targets = tf.reduce_mean(targets)
     stdev = tf.sqrt(tf.divide(tf.reduce_sum(tf.square(tf.subtract(targets, mean_of_targets))),
-                              tf.cast((BATCH_SIZE - 1), tf.double)))  # 测定值标准差
-    rmse = RMSE(logits, targets)  # 测定值均方误差
+                              (BATCH_SIZE - 1)))  # 测定值标准差
+    rmse = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(logits, targets))))  # 测定值均方误差
     rpd = tf.divide(stdev, rmse)
     return rpd
-
-
-# 测试集上三种指标相对分析误差值RPD
-def RPD_of_batch(logits, targets):
-    trans_logits = tf.transpose(logits)
-    logits_Tensile = tf.unstack(tf.cast(trans_logits, tf.double))
-    trans_targets = tf.transpose(targets)
-    targets_Tensile = tf.unstack(tf.cast(trans_targets, tf.double))
-    rpd_Tensile = RPD(logits_Tensile, targets_Tensile)
-    return rpd_Tensile
 
 
 # 获取数据
@@ -307,8 +264,8 @@ with tf.variable_scope('model_definition') as scope:
     test_output = inference(test_images, BATCH_SIZE, is_training)
 # 声明损失函数
 print('Declare Loss Function.')
-loss = train_loss(model_output, train_targets)
-loss_in_testdata = test_loss(test_output, test_targets)
+loss = cnn_loss(model_output, train_targets)
+loss_in_testdata = cnn_loss(test_output, test_targets)
 
 # 创建训练操作
 print('Create the Train Operation')
@@ -342,12 +299,15 @@ for b in range(4):
 
 saver = tf.train.Saver()
 for i in tqdm.tqdm(range(generations)):
-    # _, loss_value = sess.run([train_op, loss], {is_training: True})
+    """ _, loss_value = sess.run([train_op, loss], {is_training: True})
     # 根据Udacity中Batch normalization的教程，除了在梯度下降的时候使用is_training:True其余时候均将其设置为False
     # 显示在训练集上各项指标
-    # 因为在前100次迭代过程中会有明显的下降过程不能分清细节
+    # 因为在前100次迭代过程中会有明显的下降过程不能分清细节"""
+    # 因为我们使用了BatchNormalization算法，所以我们训练和输出前向传播结果的过程要分开
     sess.run(train_op, {is_training: True})
     if i >= 100:
+        train_Targets, model_output, test_targets, test_output = sess.run(
+            [train_targets, model_output, test_targets, test_output], {is_training: False})
         if (i + 1)%output_every == 0:
             train_R2_T = sess.run(R2_of_batch(model_output, train_targets), {is_training: False})
             train_RMSE_T = sess.run(RMSE_of_batch(model_output, train_targets),
