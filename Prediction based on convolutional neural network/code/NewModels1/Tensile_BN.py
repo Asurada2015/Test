@@ -193,8 +193,6 @@ def inference(input_images, batch_size, is_training):
 # 损失函数MSE
 def cnn_loss(logits, targets):
     mse = tf.reduce_mean(tf.square(logits - targets), name='mse')  # 均方误差
-    # regularization_loss = tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))  # weight上正则化损失
-    # mse = mse + regularization_loss
     return mse
 
 

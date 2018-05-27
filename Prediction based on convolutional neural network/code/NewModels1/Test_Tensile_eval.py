@@ -26,7 +26,7 @@ save_eval_file = 'eval.csv'
 
 # 自适应学习率衰减
 eval_epoch = 1
-eval_batch = 10
+eval_batch = 4000
 
 
 # RandomShuffleQueue '_1_shuffle_batch/random_shuffle_queue' is closed and has insufficient elements (requested 3000, current size 1680)
@@ -208,10 +208,10 @@ def MSE(logits, targets):
 
 # 计算RPD值
 def RPD(logits, targets):
-    mean_of_logits = tf.reduce_mean(logits)
-    stdev = tf.sqrt(tf.divide(tf.reduce_sum(tf.square(tf.subtract(logits, mean_of_logits))),
+    mean_of_targets= tf.reduce_mean(targets)
+    stdev = tf.sqrt(tf.divide(tf.reduce_sum(tf.square(tf.subtract(targets, mean_of_targets))),
                               (eval_batch - 1)))  # 测定值标准差
-    rmse = RMSE(logits, targets)  # 测定值均方误差
+    rmse = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(logits, targets))))  # 测定值均方误差
     rpd = tf.divide(stdev, rmse)
     return [rpd]
 
