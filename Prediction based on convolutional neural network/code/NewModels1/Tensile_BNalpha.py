@@ -12,21 +12,27 @@ sess = tf.Session()
 """alpha版的目的在于寻找最好的模型savemodel参数会去掉而使用保存最好的模型值来取代,所以每一次都会运行所有指标"""
 # 设置模型超参数
 
-output_every = 50  # 训练输出间隔/控制图像标尺
-generations = 5002  # 迭代次数 20000
-eval_every = 50  # 测试输出间隔/控制图像标尺
+output_every = 1  # 训练输出间隔/控制图像标尺
+generations = 50002  # 迭代次数 20000
+eval_every = 1  # 测试输出间隔/控制图像标尺
 image_height = 20  # 图片高度
 image_width = 20  # 图片宽度
 num_channels = 1  # 图片通道数
 num_targets = 1  # 预测指标数
 MIN_AFTER_DEQUEUE = 1000  # 管道最小容量
 BATCH_SIZE = 128  # 批处理数量  128 test use 3
-SAVEValue = 5000  # 保存模型各项参数值
+SAVEValue = 10000  # 保存模型各项参数值
 save_test_file = 'testParameter.csv'
 save_train_file = 'trainParameter.csv'
-ViewGraph = 500
-MODEL_SAVE_PATH = './Tensile_log'
+ViewGraph = 1000
+ViewDate = 100
+MODEL_SAVE_PATH = './Tensile_log_alpha'
 MODEL_NAME = 'model.ckpt'
+MAX_Test_RMSE = 0.03  # 0.03
+MAX_Test_MSE = 0.001  # 0.001
+MIN_Test_R = 0.8  # 0.8
+MIN_Test_RPD = 2.5  # 2.5
+INVALID_NUMBER = 100
 # 数据输入
 NUM_EPOCHS = 8000  # 批次轮数
 NUM_THREADS = 3  # 线程数
@@ -203,7 +209,7 @@ def MAPE(logits, targets):
 
 
 # 损失函数MSE
-def cnn_loss(logits, targets):
+def MSE(logits, targets):
     mse = tf.reduce_mean(tf.square(logits - targets), name='mse')  # 均方误差
     return mse
 
@@ -264,8 +270,8 @@ with tf.variable_scope('model_definition') as scope:
     test_output = inference(test_images, BATCH_SIZE, is_training)
 # 声明损失函数
 print('Declare Loss Function.')
-loss = cnn_loss(model_output, train_targets)
-loss_in_testdata = cnn_loss(test_output, test_targets)
+loss = RMSE(model_output, train_targets)
+loss_in_testdata = RMSE(test_output, test_targets)
 
 # 创建训练操作
 print('Create the Train Operation')
@@ -282,20 +288,18 @@ threads = tf.train.start_queue_runners(coord=coord, sess=sess)
 
 # 训练CNN模型
 print('Starting Training')
+train_mae_tl = []
+train_mape_tl = []
 train_lossl = []
 train_r2_tl = []
-train_rmse_tl = []
+train_mse_tl = []
+
+test_mae_tl = []
+test_mape_tl = []
 test_lossl = []
 test_r2_tl = []
-test_rmse_tl = []
+test_mse_tl = []
 test_rpd_tl = []
-
-log_train = []
-for a in range(3):
-    log_train.append([])
-log_test = []
-for b in range(4):
-    log_test.append([])
 
 saver = tf.train.Saver()
 for i in tqdm.tqdm(range(generations)):
@@ -305,60 +309,82 @@ for i in tqdm.tqdm(range(generations)):
     # 因为在前100次迭代过程中会有明显的下降过程不能分清细节"""
     # 因为我们使用了BatchNormalization算法，所以我们训练和输出前向传播结果的过程要分开
     sess.run(train_op, {is_training: True})
-    if i >= 100:
-        train_Targets, model_output, test_targets, test_output = sess.run(
-            [train_targets, model_output, test_targets, test_output], {is_training: False})
-        if (i + 1)%output_every == 0:
-            train_R2_T = sess.run(R2_of_batch(model_output, train_targets), {is_training: False})
-            train_RMSE_T = sess.run(RMSE_of_batch(model_output, train_targets),
-                                    {is_training: False})
-            loss_value = sess.run(loss, {is_training: False})
-            train_lossl.append(loss_value)
-            output = 'Generation {}: train Loss = {:.5f}'.format((i + 1), loss_value)
-            train_r2_tl.append(train_R2_T)
-            train_rmse_tl.append(train_RMSE_T)
-            log_train[0].append(loss_value)
-            log_train[1].append(train_R2_T)
-            log_train[2].append(train_RMSE_T)
-            print(output)  # 显示训练集上的loss值
+    Train_Targets, Model_Output, Test_Targets, Test_Output = sess.run(
+        [train_targets, model_output, test_targets, test_output], {is_training: False})
+    if i >= INVALID_NUMBER:
+        # 因为这个函数中使用了tensorflow所定义的矩阵运算的方法，所以此处一定要用Sess.run的方法来计算
+        train_Mae = MAE(Model_Output, Train_Targets)
+        train_Mape = MAPE(Model_Output, Train_Targets)
+        train_Mse = MSE(Model_Output, Train_Targets)
+        train_Rmse = RMSE(Model_Output, Train_Targets)
+        train_R2 = R2(Model_Output, Train_Targets)
+        train_mae, train_mape, train_mse, train_rmse, train_r2 = sess.run(
+            [train_Mae, train_Mape, train_Mse, train_Rmse, train_R2])
+
+        test_Mae = MAE(Test_Output, Test_Targets)
+        test_Mape = MAPE(Test_Output, Test_Targets)
+        test_Mse = MSE(Test_Output, Test_Targets)
+        test_Rmse = RMSE(Test_Output, Test_Targets)
+        test_R2 = R2(Test_Output, Test_Targets)
+        test_Rpd = RPD(Test_Output, Test_Targets)
+        test_mae, test_mape, test_mse, test_rmse, test_r2, test_rpd = sess.run(
+            [test_Mae, test_Mape, test_Mse, test_Rmse, test_R2, test_Rpd])
+
+        train_mae_tl.append(train_mae)
+        train_mape_tl.append(train_mape)
+        train_lossl.append(train_rmse)
+        output = 'Generation {}: train Loss = {:.5f}'.format((i + 1), train_rmse)
+        train_r2_tl.append(train_r2)
+        train_mse_tl.append(train_mse)
+        print(output)  # 显示训练集上的loss值
 
         # 显示在测试集上各项指标
-
-        if (i + 1)%eval_every == 0:
-            test_R2_T = sess.run(R2_of_batch(test_output, test_targets), {is_training: False})
-            test_RMSE_T = sess.run(RMSE_of_batch(test_output, test_targets),
-                                   {is_training: False})
-            test_loss_value = sess.run(loss_in_testdata, {is_training: False})
-            test_RPD_T = sess.run(RPD_of_batch(test_output, test_targets), {is_training: False})
-            test_lossl.append(test_loss_value)
-            test_loss_output = 'Generation {}: test Loss = {:.5f}'.format((i + 1), test_loss_value)
-            test_r2_tl.append(test_R2_T)
-            test_rmse_tl.append(test_RMSE_T)
-            test_rpd_tl.append(test_RPD_T)
-            log_test[0].append(test_loss_value)
-            log_test[1].append(test_R2_T)
-            log_test[2].append(test_RMSE_T)
-            log_test[3].append(test_RPD_T)
-            print(test_loss_output)
-            # 保存所有属性值
+        test_mae_tl.append(test_mae)
+        test_mape_tl.append(test_mape)
+        test_lossl.append(test_rmse)
+        test_loss_output = 'Generation {}: test Loss = {:.5f}'.format((i + 1), test_rmse)
+        test_r2_tl.append(test_r2)
+        test_mse_tl.append(test_mse)
+        test_rpd_tl.append(test_rpd)
+        print(test_loss_output)
+        # 保存所有属性值
         if (i + 1)%SAVEValue == 0:
             save_Totest_file = str(i + 1) + save_test_file
             with open(save_Totest_file, "w", newline='') as f:
                 writer = csv.writer(f)
-                for a in range(4):
-                    writer.writerows([log_test[a]])
+                for a in range(test_mae_tl.__len__()):
+                    writer.writerows([test_mae_tl[a]])
+                for a in range(test_mape_tl.__len__()):
+                    writer.writerows([test_mape_tl[a]])
+                for a in range(test_lossl.__len__()):
+                    writer.writerows([test_lossl[a]])
+                for a in range(test_r2_tl.__len__()):
+                    writer.writerows([test_r2_tl[a]])
+                for a in range(test_mse_tl.__len__()):
+                    writer.writerows([test_mse_tl[a]])
+                for a in range(test_rpd_tl.__len__()):
+                    writer.writerows([test_rpd_tl[a]])
             f.close()
+
             save_Totrain_file = str(i + 1) + save_train_file
             with open(save_Totrain_file, "w", newline='') as f:
                 writer = csv.writer(f)
-                for a in range(3):
-                    writer.writerows([log_train[a]])
+                for a in range(train_mae_tl.__len__()):
+                    writer.writerows([train_mae_tl[a]])
+                for a in range(train_mape_tl.__len__()):
+                    writer.writerows([train_mape_tl[a]])
+                for a in range(train_lossl.__len__()):
+                    writer.writerows([train_lossl[a]])
+                for a in range(train_r2_tl.__len__()):
+                    writer.writerows([train_r2_tl[a]])
+                for a in range(train_mse_tl.__len__()):
+                    writer.writerows([train_mse_tl[a]])
             f.close()
 
         if (i + 1)%ViewGraph == 0:
             # 打印损失函数
-            output_indices = range(100, i + 1, output_every)
-            eval_indices = range(100, i + 1, eval_every)
+            output_indices = range(INVALID_NUMBER, i + 1, output_every)
+            eval_indices = range(INVALID_NUMBER, i + 1, eval_every)
 
             # 显示训练集/测试集loss函数
             plt.plot(output_indices, train_lossl, label='loss in train dataset', linewidth=1.0, color='red',
@@ -370,9 +396,28 @@ for i in tqdm.tqdm(range(generations)):
             plt.legend(loc=1, fancybox=True, shadow=True)
             plt.savefig('loss_' + str(i + 1) + '.png', dpi=300)
             plt.show()
-            #
+
+            # 显示训练集/测试集MAE函数变化
+            plt.plot(output_indices, train_mae_tl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
+            plt.plot(eval_indices, test_mae_tl, label='test dataset', linewidth=1.0, color='blue')
+            plt.title(' MAE of Tensile')
+            plt.xlabel('Generation')
+            plt.ylabel('MAE')
+            plt.legend(loc=1, fancybox=True, shadow=True)
+            plt.savefig('MAE_' + str(i + 1) + '.png', dpi=300)
+            plt.show()
+
+            # 显示训练集/测试集MAPE函数变化
+            plt.plot(output_indices, train_mape_tl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
+            plt.plot(eval_indices, test_mape_tl, label='test dataset', linewidth=1.0, color='blue')
+            plt.title(' MAPE of Tensile')
+            plt.xlabel('Generation')
+            plt.ylabel('MAPE')
+            plt.legend(loc=1, fancybox=True, shadow=True)
+            plt.savefig('MAPE_' + str(i + 1) + '.png', dpi=300)
+            plt.show()
+
             # 显示训练集/测试集R2函数变化
-            plt.figure()
             plt.plot(output_indices, train_r2_tl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
             plt.plot(eval_indices, test_r2_tl, label='test dataset', linewidth=1.0, color='blue')
             plt.title(' R of Tensile')
@@ -382,19 +427,17 @@ for i in tqdm.tqdm(range(generations)):
             plt.savefig('R_' + str(i + 1) + '.png', dpi=300)
             plt.show()
 
-            # 显示训练集/测试集RMSE函数变化
-            plt.figure()
-            plt.plot(output_indices, train_rmse_tl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
-            plt.plot(eval_indices, test_rmse_tl, label='test dataset', linewidth=1.0, color='blue')
-            plt.title(' RMSE of Tensile')
+            # 显示训练集/测试集MSE函数变化
+            plt.plot(output_indices, train_mse_tl, label='train dataset', linewidth=1.0, color='red', linestyle='--')
+            plt.plot(eval_indices, test_mse_tl, label='test dataset', linewidth=1.0, color='blue')
+            plt.title(' MSE of Tensile')
             plt.xlabel('Generation')
-            plt.ylabel('RMSE')
+            plt.ylabel('MSE')
             plt.legend(loc=1, fancybox=True, shadow=True)
-            plt.savefig('RMSE_' + str(i + 1) + '.png', dpi=300)
+            plt.savefig('MSE_' + str(i + 1) + '.png', dpi=300)
             plt.show()
 
             # 显示测试集RPD函数变化
-            plt.figure()
             plt.plot(eval_indices, test_rpd_tl, label='test dataset', linewidth=1.0, color='blue')
             plt.title(' RPD of Tensile')
             plt.xlabel('Generation')
@@ -403,12 +446,20 @@ for i in tqdm.tqdm(range(generations)):
             plt.savefig('RPD_' + str(i + 1) + '.png', dpi=300)
             plt.show()
             plt.close()
-            print('训练集上一个批次数据的前10个数据\n', sess.run(train_targets)[:10])
-            print('测试集上一个批次数据的前10个数据\n', sess.run(test_targets)[:10])
-            print('训练集上一个批次数据通过inference的前10个输出结果\n', sess.run(model_output, {is_training: False})[:10])
-            print('测试集上一个批次数据中通过inference后的前10个输出结果\n', sess.run(test_output, {is_training: False})[:10])
-        if i%Savemodel == 0:
+        if test_rmse < MAX_Test_RMSE:
             saver.save(sess, os.path.join(MODEL_SAVE_PATH, MODEL_NAME), global_step=i)
+        elif test_mse < MAX_Test_MSE:
+            saver.save(sess, os.path.join(MODEL_SAVE_PATH, MODEL_NAME), global_step=i)
+        elif test_r2 > MIN_Test_R:
+            saver.save(sess, os.path.join(MODEL_SAVE_PATH, MODEL_NAME), global_step=i)
+        elif test_rpd > MIN_Test_RPD:
+            saver.save(sess, os.path.join(MODEL_SAVE_PATH, MODEL_NAME), global_step=i)
+
+    if (i + 1)%ViewDate == 0:
+        print('训练集批次数据的前10个数据\n', Train_Targets[:10])
+        print('训练集批次数据通过inference的前10个输出结果\n', Model_Output[:10])
+        print('测试集批次数据的前10个数据\n', Test_Targets[:10])
+        print('测试集批次数据中通过inference后的前10个输出结果\n', Test_Output[:10])
 # 关闭线程和Session
 coord.request_stop()
 coord.join(threads)
