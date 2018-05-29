@@ -24,7 +24,7 @@ BATCH_SIZE = 128  # 批处理数量  128 test use 3
 SAVEValue = 10000  # 保存模型各项参数值
 save_test_file = 'testParameter.csv'
 save_train_file = 'trainParameter.csv'
-ViewGraph = 2000
+ViewGraph = 1000
 ViewDate = 100
 MODEL_SAVE_PATH = './Tensile_log_alpha'
 MODEL_NAME = 'model.ckpt'
@@ -40,7 +40,7 @@ TRAIN_FILE = '235b_train_1.csv'
 TEST_FILE = '235b_test_1.csv'
 
 # 自适应学习率衰减
-learning_rate = 0.05  # 初始学习率
+learning_rate = 0.1  # 初始学习率
 lr_decay = 0.9  # 学习率衰减速度
 num_gens_to_wait = 90  # 学习率更新周期 decay_steps：衰减次数，为样本总数/个次训练的batch大小，固定值11520/128=90
 
