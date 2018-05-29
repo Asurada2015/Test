@@ -40,8 +40,8 @@ TRAIN_FILE = '235b_train_1.csv'
 TEST_FILE = '235b_test_1.csv'
 
 # 自适应学习率衰减
-learning_rate = 0.05  # 初始学习率
-lr_decay = 0.9  # 学习率衰减速度
+learning_rate = 0.025  # 初始学习率
+lr_decay = 0.75  # 学习率衰减速度
 num_gens_to_wait = 90  # 学习率更新周期 decay_steps：衰减次数，为样本总数/个次训练的batch大小，固定值11520/128=90
 
 
