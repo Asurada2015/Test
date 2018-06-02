@@ -18,16 +18,16 @@ image_width = 20  # 图片宽度
 num_channels = 1  # 图片通道数
 num_targets = 1  # 预测指标数
 MIN_AFTER_DEQUEUE = 100  # 管道最小容量
-MODEL_SAVE_PATH = './Tensile_log_alpha3/18149'
+MODEL_SAVE_PATH = './Tensile_log_alpha2/62599'
 MODEL_NAME = 'model.ckpt'
 NUM_THREADS = 1  # 线程数
-EVAL_FILE = '235b_eval_2.csv'
-save_eval_file = 'eval_2.csv'
+EVAL_FILE = '235b_eval_1.csv'
+save_eval_file = 'eval.csv'
 REGULARAZTION_RATE = 0.000001  # 正则化项在损失函数中的系数,如果使用0值则表示不使用正则项
 
 # 自适应学习率衰减
 eval_epoch = 1
-eval_batch = 3700
+eval_batch = 4680
 
 
 # RandomShuffleQueue '_1_shuffle_batch/random_shuffle_queue' is closed and has insufficient elements (requested 3000, current size 1680)
@@ -61,6 +61,43 @@ def create_pipeline(filename, batch_size, num_threads):
     example_batch, label_batch, num_batch = tf.train.batch(
         [example, label, num], batch_size=batch_size, num_threads=num_threads)
     return example_batch, label_batch, num_batch
+
+
+# 定义模型架构
+
+# 读取数据
+def read_data(file_queue):
+    reader = tf.TextLineReader(skip_header_lines=1)
+    key, value = reader.read(file_queue)
+    defaults = [[0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.],
+                [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.],
+                [0.], [0.], [0.]]
+    C, MN, SI, P, S, CU, AL, ALS, NI, CR, TI, MO, V, NB, N, B, Furnace, RoughMill, FinishMill, DownCoil, Tensile, Yeild, Elongation \
+        = tf.decode_csv(value, defaults)
+    vertor_example = tf.stack(
+        [C, MN, SI, P, S, CU, AL, ALS, NI, CR, TI, MO, V, NB, N, B, Furnace, RoughMill, FinishMill,
+         DownCoil])
+    # 将(20)维度的数据添加维度成为(1,20)的向量
+
+    example_2D = tf.expand_dims(vertor_example, 0)
+    trans_example_2D = tf.transpose(example_2D)
+    example = tf.expand_dims(tf.matmul(trans_example_2D, example_2D), 2)
+    vertor_label = tf.stack([Tensile])
+    return example, vertor_label
+
+
+# 创建输入管道
+def create_pipeline(filename, batch_size, num_threads, num_epochs=None):
+    file_queue = tf.train.string_input_producer([filename], num_epochs=num_epochs)  # 设置文件名队列
+    example, label = read_data(file_queue)  # 读取数据和标签
+
+    min_after_dequeue = MIN_AFTER_DEQUEUE
+    # capacity = min_after_dequeue + batch_size
+    capacity = min_after_dequeue + (num_threads + 3*batch_size)
+    example_batch, label_batch = tf.train.shuffle_batch(
+        [example, label], batch_size=batch_size, num_threads=num_threads, capacity=capacity,
+        min_after_dequeue=min_after_dequeue)
+    return example_batch, label_batch
 
 
 # 定义模型架构
@@ -205,13 +242,12 @@ def inference(input_images, batch_size, is_training):
     return final_output
 
 
+
 # 定义评价函数
 # 计算MAE平均绝对误差
 def MAE(logits, targets):
     mae = tf.reduce_mean(tf.abs(tf.subtract(logits, targets)))  # 平均绝对误差
     return [mae]
-
-
 # 因为后面我们要将其保存到csv文件中，为方便起见，我们使用list这种iterable的对象储存输出的评价函数值
 
 # 计算MAPE 平均绝对百分误差
@@ -234,7 +270,7 @@ def MSE(logits, targets):
 
 # 计算RPD值
 def RPD(logits, targets):
-    mean_of_targets = tf.reduce_mean(targets)
+    mean_of_targets= tf.reduce_mean(targets)
     stdev = tf.sqrt(tf.divide(tf.reduce_sum(tf.square(tf.subtract(targets, mean_of_targets))),
                               (eval_batch - 1)))  # 测定值标准差
     rmse = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(logits, targets))))  # 测定值均方误差

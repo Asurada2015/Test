@@ -18,16 +18,16 @@ image_width = 20  # 图片宽度
 num_channels = 1  # 图片通道数
 num_targets = 1  # 预测指标数
 MIN_AFTER_DEQUEUE = 100  # 管道最小容量
-MODEL_SAVE_PATH = './Tensile_log_alpha3/18149'
+MODEL_SAVE_PATH = './Yield_log_alpha'
 MODEL_NAME = 'model.ckpt'
 NUM_THREADS = 1  # 线程数
-EVAL_FILE = '235b_eval_2.csv'
-save_eval_file = 'eval_2.csv'
-REGULARAZTION_RATE = 0.000001  # 正则化项在损失函数中的系数,如果使用0值则表示不使用正则项
+EVAL_FILE = '235b_eval_1.csv'
+save_eval_file = 'eval.csv'
+# REGULARAZTION_RATE = 0.000001  # 正则化项在损失函数中的系数,如果使用0值则表示不使用正则项
 
 # 自适应学习率衰减
 eval_epoch = 1
-eval_batch = 3700
+eval_batch = 4680
 
 
 # RandomShuffleQueue '_1_shuffle_batch/random_shuffle_queue' is closed and has insufficient elements (requested 3000, current size 1680)
@@ -39,7 +39,7 @@ def read_data(file_queue):
     defaults = [[0], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.],
                 [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.], [0.],
                 [0.], [0.], [0.]]
-    NUM, C, MN, SI, P, S, CU, AL, ALS, NI, CR, TI, MO, V, NB, N, B, Furnace, RoughMill, FinishMill, DownCoil, Tensile, Yeild, Elongation \
+    NUM, C, MN, SI, P, S, CU, AL, ALS, NI, CR, TI, MO, V, NB, N, B, Furnace, RoughMill, FinishMill, DownCoil, Tensile, Yield, Elongation \
         = tf.decode_csv(value, defaults)
     vertor_example = tf.stack(
         [C, MN, SI, P, S, CU, AL, ALS, NI, CR, TI, MO, V, NB, N, B, Furnace, RoughMill, FinishMill,
@@ -49,7 +49,7 @@ def read_data(file_queue):
     example_2D = tf.expand_dims(vertor_example, 0)
     trans_example_2D = tf.transpose(example_2D)
     example = tf.expand_dims(tf.matmul(trans_example_2D, example_2D), 2)
-    vertor_label = tf.stack([Tensile])
+    vertor_label = tf.stack([Yield])
     vertor_num = tf.stack([NUM])
     return example, vertor_label, vertor_num
 
@@ -68,7 +68,7 @@ def create_pipeline(filename, batch_size, num_threads):
 def inference(input_images, batch_size, is_training):
     # 第一卷积层
     with tf.variable_scope('conv1') as scope:
-        conv1 = tf.layers.conv2d(input_images, 64, kernel_size=(3, 3), strides=(1, 1), padding='SAME', use_bias=False,
+        conv1 = tf.layers.conv2d(input_images, 32, kernel_size=(3, 3), strides=(1, 1), padding='SAME', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
                                  activation=None)
         conv1 = tf.layers.batch_normalization(conv1, training=is_training)
@@ -102,7 +102,6 @@ def inference(input_images, batch_size, is_training):
     with tf.variable_scope('conv4') as scope:
         conv4 = tf.layers.conv2d(pool3, 128, kernel_size=(3, 3), strides=(1, 1), padding='SAME', use_bias=False,
                                  kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
                                  activation=None)
         conv4 = tf.layers.batch_normalization(conv4, training=is_training)
         relu_conv4 = tf.nn.relu(conv4, name='relu_conv4')
@@ -110,59 +109,35 @@ def inference(input_images, batch_size, is_training):
     # 池化层/下采样层
     pool4 = tf.nn.max_pool(relu_conv4, ksize=[1, 2, 2, 1], strides=[1, 1, 1, 1], padding='SAME', name='pool_layer4')
 
-    # 第五个卷积层
-    with tf.variable_scope('conv5') as scope:
-        conv5 = tf.layers.conv2d(pool4, 128, kernel_size=(3, 3), strides=(1, 1), padding='SAME', use_bias=False,
-                                 kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
-                                 activation=None)
-        conv5 = tf.layers.batch_normalization(conv5, training=is_training)
-        relu_conv5 = tf.nn.relu(conv5, name='relu_conv5')
-
-    # 池化层/下采样层
-    pool5 = tf.nn.max_pool(relu_conv5, ksize=[1, 2, 2, 1], strides=[1, 1, 1, 1], padding='SAME', name='pool_layer5')
-
-    # 第六个卷积层
-    with tf.variable_scope('conv6') as scope:
-        conv6 = tf.layers.conv2d(pool5, 128, kernel_size=(3, 3), strides=(1, 1), padding='SAME', use_bias=False,
-                                 kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
-                                 activation=None)
-        conv6 = tf.layers.batch_normalization(conv6, training=is_training)
-        relu_conv6 = tf.nn.relu(conv6, name='relu_conv6')
-
-    # 池化层/下采样层
-    pool6 = tf.nn.max_pool(relu_conv6, ksize=[1, 2, 2, 1], strides=[1, 1, 1, 1], padding='SAME', name='pool_layer6')
-
-    # 第七个卷积层
-    with tf.variable_scope('conv7') as scope:
-        conv7 = tf.layers.conv2d(pool6, 256, kernel_size=(3, 3), strides=(1, 1), padding='SAME', use_bias=False,
-                                 kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                 activation=None)
-        conv7 = tf.layers.batch_normalization(conv7, training=is_training)
-        relu_conv7 = tf.nn.relu(conv7, name='relu_conv7')
-
-    # 池化层/下采样层
-    pool7 = tf.nn.max_pool(relu_conv7, ksize=[1, 2, 2, 1], strides=[1, 1, 1, 1], padding='SAME', name='pool_layer7')
-
-    # 第八个卷积层
-    with tf.variable_scope('conv8') as scope:
-        conv8 = tf.layers.conv2d(pool7, 256, kernel_size=(3, 3), strides=(1, 1), padding='SAME', use_bias=False,
-                                 kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                                 activation=None)
-        conv8 = tf.layers.batch_normalization(conv8, training=is_training)
-        relu_conv8 = tf.nn.relu(conv8, name='relu_conv8')
-
-    # 池化层/下采样层
-    pool8 = tf.nn.max_pool(relu_conv8, ksize=[1, 2, 2, 1], strides=[1, 1, 1, 1], padding='SAME', name='pool_layer8')
+    # # 第五个卷积层
+    # with tf.variable_scope('conv5') as scope:
+    #     conv5 = tf.layers.conv2d(pool4, 256, kernel_size=(3, 3), strides=(1, 1), padding='SAME', use_bias=False,
+    #                              kernel_initializer=tf.contrib.layers.xavier_initializer(),
+    #                              activation=None)
+    #     conv5 = tf.layers.batch_normalization(conv5, training=is_training)
+    #     relu_conv5 = tf.nn.relu(conv5, name='relu_conv5')
+    #
+    # # 池化层/下采样层
+    # pool5 = tf.nn.max_pool(relu_conv5, ksize=[1, 2, 2, 1], strides=[1, 1, 1, 1], padding='SAME', name='pool_layer5')
+    #
+    # # 第六个卷积层
+    # with tf.variable_scope('conv6') as scope:
+    #     conv6 = tf.layers.conv2d(pool5, 256, kernel_size=(3, 3), strides=(1, 1), padding='SAME', use_bias=False,
+    #                              kernel_initializer=tf.contrib.layers.xavier_initializer(),
+    #                              activation=None)
+    #     conv6 = tf.layers.batch_normalization(conv6, training=is_training)
+    #     relu_conv6 = tf.nn.relu(conv6, name='relu_conv6')
+    #
+    # # 池化层/下采样层
+    # pool6 = tf.nn.max_pool(relu_conv6, ksize=[1, 2, 2, 1], strides=[1, 1, 1, 1], padding='SAME', name='pool_layer6')
 
     # 光栅化处理，将其打平方便和全连接层进行连接
-    reshaped_output = tf.reshape(pool8, [batch_size, -1])
+    reshaped_output = tf.reshape(pool4, [batch_size, -1])
     reshaped_dim = reshaped_output.get_shape()[1].value
 
     # 全连接层1
     with tf.variable_scope('full1') as scope:
-        full_layer1 = tf.layers.dense(reshaped_output, 512, activation=None, use_bias=False,
+        full_layer1 = tf.layers.dense(reshaped_output, 128, activation=None, use_bias=True,
                                       kernel_initializer=tf.contrib.layers.xavier_initializer())
         full_layer1 = tf.layers.batch_normalization(full_layer1, training=is_training)
         full_layer1 = tf.nn.relu(full_layer1)
@@ -170,8 +145,7 @@ def inference(input_images, batch_size, is_training):
     # 全连接层2
     with tf.variable_scope('full2') as scope:
         # 第二个全连接层有192个输出
-        full_layer2 = tf.layers.dense(full_layer1, 256, activation=None, use_bias=False,
-                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(REGULARAZTION_RATE),
+        full_layer2 = tf.layers.dense(full_layer1, 64, activation=None, use_bias=True,
                                       kernel_initializer=tf.contrib.layers.xavier_initializer())
         full_layer2 = tf.layers.batch_normalization(full_layer2, training=is_training)
         full_layer2 = tf.nn.relu(full_layer2)
@@ -179,18 +153,18 @@ def inference(input_images, batch_size, is_training):
     # 全连接层3
     with tf.variable_scope('full3') as scope:
         # 第二个全连接层有192个输出
-        full_layer3 = tf.layers.dense(full_layer2, 256, activation=None, use_bias=False,
+        full_layer3 = tf.layers.dense(full_layer2, 32, activation=None, use_bias=True,
                                       kernel_initializer=tf.contrib.layers.xavier_initializer())
         full_layer3 = tf.layers.batch_normalization(full_layer3, training=is_training)
         full_layer3 = tf.nn.relu(full_layer3)
 
-    # 全连接层4
-    with tf.variable_scope('full4') as scope:
-        # 第二个全连接层有192个输出
-        full_layer4 = tf.layers.dense(full_layer3, 128, activation=None, use_bias=False,
-                                      kernel_initializer=tf.contrib.layers.xavier_initializer())
-        full_layer4 = tf.layers.batch_normalization(full_layer4, training=is_training)
-        full_layer4 = tf.nn.relu(full_layer4)
+    # # 全连接层4
+    # with tf.variable_scope('full4') as scope:
+    #     # 第二个全连接层有192个输出
+    #     full_layer4 = tf.layers.dense(full_layer3, 128, activation=None, use_bias=True,
+    #                                   kernel_initializer=tf.contrib.layers.xavier_initializer())
+    #     full_layer4 = tf.layers.batch_normalization(full_layer4, training=is_training)
+    #     full_layer4 = tf.nn.relu(full_layer4)
 
     # # 最后的全连接层只有1个输出
     # with tf.variable_scope('full5') as scope:
@@ -200,7 +174,7 @@ def inference(input_images, batch_size, is_training):
 
     # 最后一层全连接层
     with tf.variable_scope('full') as scope:
-        final_output = tf.layers.dense(full_layer4, num_targets, activation=None, use_bias=True,
+        final_output = tf.layers.dense(full_layer3, num_targets, activation=None, use_bias=True,
                                        kernel_initializer=tf.contrib.layers.xavier_initializer())
     return final_output
 
