@@ -18,10 +18,10 @@ image_width = 20  # 图片宽度
 num_channels = 1  # 图片通道数
 num_targets = 1  # 预测指标数
 MIN_AFTER_DEQUEUE = 100  # 管道最小容量
-MODEL_SAVE_PATH = './Tensile_log_alpha1/49249'
+MODEL_SAVE_PATH = '.'
 MODEL_NAME = 'model.ckpt'
 NUM_THREADS = 1  # 线程数
-EVAL_FILE = '235b_eval_1.csv'
+EVAL_FILE = '../235b_eval_1.csv'
 save_eval_file = 'eval.csv'
 
 # 自适应学习率衰减
